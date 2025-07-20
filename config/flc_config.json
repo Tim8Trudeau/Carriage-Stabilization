@@ -1,0 +1,77 @@
+{
+    "system_constants": {
+        "WHEEL_TO_MOTOR_RPM_RATIO": 10.0,
+        "MAX_MOTOR_RPM": 100.0,
+        "MAX_WHEEL_RPM": 10.0
+    },
+    "controller_params": {
+        "TARGET_HZ": 50.0,
+        "THETA_RANGE_RAD": 3.14159,
+        "OMEGA_RANGE_RAD_S": 3.14159
+    },
+    "iir_filter": {
+        "SAMPLE_RATE_HZ": 50.0,
+        "CUTOFF_FREQ_HZ": 5.0
+    },
+    "membership_functions": {
+        "theta": {
+            "LECCW": [-1.5, -1.0, -0.5],
+            "MECCW": [-1.0, -0.5, 0.0],
+            "SECCW": [-0.5, -0.25, 0.0],
+            "NE": [-0.25, 0.0, 0.25],
+            "SECW": [0.0, 0.25, 0.5],
+            "MECW": [0.0, 0.5, 1.0],
+            "LECW": [0.5, 1.0, 1.5]
+        },
+        "omega": {
+            "LVCCW": [-1.5, -1.0, -0.5],
+            "SVCCW": [-1.0, -0.5, 0.0],
+            "NV": [-0.5, 0.0, 0.5],
+            "SVCW": [0.0, 0.5, 1.0],
+            "LVCW": [0.5, 1.0, 1.5]
+        }
+    },
+    "rule_base": [
+        {"rule": ["LECCW", "LVCCW"], "output": {"theta_coeff": 1.0, "omega_coeff": 0.5, "bias": 1.0}},
+        {"rule": ["LECCW", "SVCCW"], "output": {"theta_coeff": 1.0, "omega_coeff": 0.4, "bias": 0.9}},
+        {"rule": ["LECCW", "NV"],    "output": {"theta_coeff": 1.0, "omega_coeff": 0.0, "bias": 0.8}},
+        {"rule": ["LECCW", "SVCW"],  "output": {"theta_coeff": 1.0, "omega_coeff": -0.4, "bias": 0.7}},
+        {"rule": ["LECCW", "LVCW"],  "output": {"theta_coeff": 1.0, "omega_coeff": -0.5, "bias": 0.6}},
+
+        {"rule": ["MECCW", "LVCCW"], "output": {"theta_coeff": 0.8, "omega_coeff": 0.5, "bias": 0.8}},
+        {"rule": ["MECCW", "SVCCW"], "output": {"theta_coeff": 0.8, "omega_coeff": 0.4, "bias": 0.7}},
+        {"rule": ["MECCW", "NV"],    "output": {"theta_coeff": 0.8, "omega_coeff": 0.0, "bias": 0.6}},
+        {"rule": ["MECCW", "SVCW"],  "output": {"theta_coeff": 0.8, "omega_coeff": -0.4, "bias": 0.5}},
+        {"rule": ["MECCW", "LVCW"],  "output": {"theta_coeff": 0.8, "omega_coeff": -0.5, "bias": 0.4}},
+
+        {"rule": ["SECCW", "LVCCW"], "output": {"theta_coeff": 0.5, "omega_coeff": 0.5, "bias": 0.5}},
+        {"rule": ["SECCW", "SVCCW"], "output": {"theta_coeff": 0.5, "omega_coeff": 0.3, "bias": 0.4}},
+        {"rule": ["SECCW", "NV"],    "output": {"theta_coeff": 0.5, "omega_coeff": 0.0, "bias": 0.2}},
+        {"rule": ["SECCW", "SVCW"],  "output": {"theta_coeff": 0.5, "omega_coeff": -0.3, "bias": 0.1}},
+        {"rule": ["SECCW", "LVCW"],  "output": {"theta_coeff": 0.5, "omega_coeff": -0.5, "bias": 0.0}},
+
+        {"rule": ["NE", "LVCCW"],    "output": {"theta_coeff": 0.0, "omega_coeff": 0.8, "bias": 0.2}},
+        {"rule": ["NE", "SVCCW"],    "output": {"theta_coeff": 0.0, "omega_coeff": 0.5, "bias": 0.1}},
+        {"rule": ["NE", "NV"],       "output": {"theta_coeff": 0.0, "omega_coeff": 0.0, "bias": 0.0}},
+        {"rule": ["NE", "SVCW"],     "output": {"theta_coeff": 0.0, "omega_coeff": -0.5, "bias": -0.1}},
+        {"rule": ["NE", "LVCW"],     "output": {"theta_coeff": 0.0, "omega_coeff": -0.8, "bias": -0.2}},
+
+        {"rule": ["SECW", "LVCCW"],  "output": {"theta_coeff": -0.5, "omega_coeff": 0.5, "bias": 0.0}},
+        {"rule": ["SECW", "SVCCW"],  "output": {"theta_coeff": -0.5, "omega_coeff": 0.3, "bias": -0.1}},
+        {"rule": ["SECW", "NV"],     "output": {"theta_coeff": -0.5, "omega_coeff": 0.0, "bias": -0.2}},
+        {"rule": ["SECW", "SVCW"],   "output": {"theta_coeff": -0.5, "omega_coeff": -0.3, "bias": -0.4}},
+        {"rule": ["SECW", "LVCW"],   "output": {"theta_coeff": -0.5, "omega_coeff": -0.5, "bias": -0.5}},
+
+        {"rule": ["MECW", "LVCCW"],  "output": {"theta_coeff": -0.8, "omega_coeff": 0.5, "bias": -0.4}},
+        {"rule": ["MECW", "SVCCW"],  "output": {"theta_coeff": -0.8, "omega_coeff": 0.4, "bias": -0.5}},
+        {"rule": ["MECW", "NV"],     "output": {"theta_coeff": -0.8, "omega_coeff": 0.0, "bias": -0.6}},
+        {"rule": ["MECW", "SVCW"],   "output": {"theta_coeff": -0.8, "omega_coeff": -0.4, "bias": -0.7}},
+        {"rule": ["MECW", "LVCW"],   "output": {"theta_coeff": -0.8, "omega_coeff": -0.5, "bias": -0.8}},
+
+        {"rule": ["LECW", "LVCCW"],  "output": {"theta_coeff": -1.0, "omega_coeff": 0.5, "bias": -0.6}},
+        {"rule": ["LECW", "SVCCW"],  "output": {"theta_coeff": -1.0, "omega_coeff": 0.4, "bias": -0.7}},
+        {"rule": ["LECW", "NV"],     "output": {"theta_coeff": -1.0, "omega_coeff": 0.0, "bias": -0.8}},
+        {"rule": ["LECW", "SVCW"],   "output": {"theta_coeff": -1.0, "omega_coeff": -0.4, "bias": -0.9}},
+        {"rule": ["LECW", "LVCW"],   "output": {"theta_coeff": -1.0, "omega_coeff": -0.5, "bias": -1.0}}
+    ]
+}
