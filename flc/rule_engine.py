@@ -62,7 +62,8 @@ class RuleEngine:
             degree_omega = fuzzified_omega.get(omega_set, 0.0)
 
             # Firing strength (W) is the fuzzy AND (min) of the degrees
-            firing_strength = min(degree_theta, degree_omega)
+            # Need to change the rules to fuzzy OR (max) 
+            firing_strength = max(degree_theta, degree_omega)
 
             if firing_strength > 0:
                 # Calculate crisp output (Z) from the Sugeno consequent
@@ -73,7 +74,7 @@ class RuleEngine:
                 
                 active_rules_output.append((firing_strength, z))
                 rule_engine_log.debug(
-                    "Rule %d fired: W=%.3f, Z=%.3f (IF theta is %s AND omega is %s)",
+                    "Rule %d fired: W=%.3f, Z=%.3f (IF theta is %s OR omega is %s)",
                     i, firing_strength, z, theta_set, omega_set
                 )
         

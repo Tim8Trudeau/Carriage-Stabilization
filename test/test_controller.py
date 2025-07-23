@@ -1,6 +1,7 @@
 import pytest
 import json
 from flc.controller import FLCController
+# Theta and Omega must be normilized to range -1 to +1
 
 @pytest.fixture
 def full_config():
@@ -48,4 +49,11 @@ def test_controller_cycle_combined_error(flc_controller):
     # We expect a strong positive (CW) motor command to correct this.
     motor_cmd = flc_controller.calculate_motor_cmd(theta=-0.3, omega=-0.6)
     assert motor_cmd > 0.0
+
+def test_controller_cycle_large_error(flc_controller):
+    """Test with position near pi and a velocity error."""
+    # Carriage is at -90 degrees (CCW) and moving counter-clockwise.
+    # We expect a max positive (CW) motor command to correct this.
+    motor_cmd = flc_controller.calculate_motor_cmd(theta=-1.0, omega=-.6)
+    assert motor_cmd == pytest.approx(1.0, abs=1e-2)
 

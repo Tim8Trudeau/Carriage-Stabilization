@@ -1,6 +1,6 @@
 import pytest
 import json
-from sensor.accel_driver import AccelDriver
+from sensor.imu_driver import IMU_Driver
 import numpy as np
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def config():
 @pytest.fixture
 def accel_driver(config):
     """Returns an AccelDriver instance."""
-    return AccelDriver(config['iir_filter'], config['controller_params'])
+    return IMU_Driver(config['iir_filter'], config['controller_params'])
 
 def test_driver_initialization(accel_driver):
     assert accel_driver is not None
@@ -63,7 +63,7 @@ def test_normalization_clamping(accel_driver, mocker):
         return norm_theta, norm_omega
     
     # patch get_processed_inputs() then call it triggering the mock.
-    mocker.patch.object(AccelDriver, "get_processed_inputs", side_effect=mock_process)
+    mocker.patch.object(IMU_Driver, "get_processed_inputs", side_effect=mock_process)
     norm_theta, norm_omega = accel_driver.get_processed_inputs()
 
     # Now you can assert on the normalized returned values
@@ -99,7 +99,7 @@ def test_normalization_clamping_variants(accel_driver, mocker, theta_val, omega_
     # Patch the processing function on the AccelDriver instance
     # and test a parametrized list of edge cases.
     mock = make_mock_process(theta_val, omega_val, accel_driver)
-    mocker.patch.object(AccelDriver, "get_processed_inputs", side_effect=mock)
+    mocker.patch.object(IMU_Driver, "get_processed_inputs", side_effect=mock)
 
     # Call the method, which triggers the mocked function
     norm_theta, norm_omega = accel_driver.get_processed_inputs()

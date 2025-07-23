@@ -50,8 +50,10 @@ class Fuzzifier:
         
         if x <= a or x >= c:
             return 0.0
+        # left half rt triangle
         elif a < x <= b:
             return (x - a) / (b - a) if b - a > 0 else 1.0
+        # right half rt triangle
         elif b < x < c:
             return (c - x) / (c - b) if c - b > 0 else 1.0
         return 0.0

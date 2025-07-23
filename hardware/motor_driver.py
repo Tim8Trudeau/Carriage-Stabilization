@@ -1,11 +1,14 @@
+import logging
+from .mock_pigpio import MockPigpio
+
 """
 Driver for the H-Bridge motor controller.
 
-This module converts the FLC's normalized output command into a format
-suitable for the hardware motor driver (a 13-bit signed integer) and sends
-it over an I2C interface. For development, the I2C bus is mocked.
+This module converts the FLC's normalized motor output command into a
+16 bit signed integer. This value is then used to produce the PWM signal
+needed by the motor hardware. The pigio module generates the PWM output using 
+the hardware PWM0 channel (output on gpio_18 pin 12)
 """
-import logging
 
 # Mock busio for Windows development
 try:
@@ -74,7 +77,7 @@ class MotorDriver:
 
         try:
             self.i2c.writeto(self.i2c_address, buffer)
-            motor_log.debug("Set motor speed: norm=%.4f -> 13bit=%d",
+            motor_log.debug("Set motor speed: norm=%.4f -> 16bit=%d",
                           normalized_speed, value)
         except Exception as e:
             motor_log.error("Failed to write to motor driver via I2C: %s", e)
