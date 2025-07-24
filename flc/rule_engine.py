@@ -37,7 +37,7 @@ class RuleEngine:
         Evaluates all rules in the rule base.
 
         For each rule, it computes the firing strength (W) and the crisp output (Z).
-        The firing strength is the minimum of the membership degrees of the
+        The firing strength is the maximum of the membership degrees of the
         antecedents (fuzzy AND). The crisp output is calculated from the
         Sugeno-style linear equation.
 
@@ -68,9 +68,10 @@ class RuleEngine:
             if firing_strength > 0:
                 # Calculate crisp output (Z) from the Sugeno consequent
                 consequent = rule['output']
-                z = (consequent['theta_coeff'] * crisp_theta +
-                     consequent['omega_coeff'] * crisp_omega +
-                     consequent['bias'])
+                z1 = consequent['theta_coeff'] * crisp_theta
+                z2 = consequent['omega_coeff'] * crisp_omega
+                z3 = consequent['bias']
+                z = z1 +z2 + z3
                 
                 active_rules_output.append((firing_strength, z))
                 rule_engine_log.debug(

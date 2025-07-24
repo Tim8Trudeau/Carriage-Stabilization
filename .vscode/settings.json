@@ -1,7 +1,10 @@
 {
     "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
 
-    // Linting (Ruff)
+    "files.associations": {
+    "*.json5": "json"
+  }
+   // Linting (Ruff)
     "python.linting.enabled": true,
     "python.linting.ruffEnabled": true,
     "python.linting.flake8Enabled": false,
@@ -11,8 +14,8 @@
     // Testing (pytest, only unit)
     "python.testing.pytestEnabled": true,
     "python.testing.pytestArgs": [
-        "-m", "unit"
-    ],
+        "test",          // search from the test/ folder
+     ],
     "python.testing.unittestEnabled": false,
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
 
@@ -23,7 +26,4 @@
 
     // Editor preferences
     "editor.rulers": [88],
-    "files.associations": {
-        "*.json": "jsonc"
-    }
 }

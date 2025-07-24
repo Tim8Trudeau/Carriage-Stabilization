@@ -8,12 +8,12 @@ of data from sensor to motor to stabilize the carriage.
 """
 
 import time
-import json
+import json5
 import logging
 
 from utils.logger import setup_logging
 from utils.profiler import CodeProfiler
-from sensor.accel_driver import AccelDriver
+from sensor.imu_driver import IMU_Driver
 from flc.controller import FLCController
 from hardware.motor_driver import MotorDriver
 
@@ -29,14 +29,14 @@ def main_control_loop():
 
     # --- 1. Load Configuration ---
     try:
-        with open('config/flc_config.json', 'r') as f:
-            config = json.load(f)
-        main_log.info("Configuration file 'flc_config.json' loaded.")
+        with open('config/flc_config.json5', 'r') as f:
+            config = json5.load(f)
+        main_log.info("Configuration file 'flc_config.json5' loaded.")
     except FileNotFoundError:
         main_log.error("FATAL: Configuration file not found. Exiting.")
         return
-    except json.JSONDecodeError:
-        main_log.error("FATAL: Configuration file is not valid JSON. Exiting.")
+    except json5.JSONDecodeError:
+        main_log.error("FATAL: Configuration file is not valid JSON5. Exiting.")
         return
 
     # --- 2. Initialize Components ---
@@ -44,7 +44,7 @@ def main_control_loop():
     loop_period = 1.0 / target_hz
 
     try:
-        sensor = AccelDriver(config['iir_filter'], config['controller_params'])
+        sensor = IMU_Driver(config['iir_filter'], config['controller_params'])
         flc = FLCController(config)
         motor = MotorDriver()
         main_log.info("All components initialized successfully.")

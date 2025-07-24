@@ -80,6 +80,6 @@ class Fuzzifier:
             if degree > 0:
                 fuzzified_output[set_name] = degree
         
-        fuzzifier_log.debug("Fuzzified %s=%f -> %s", 
+        fuzzifier_log.debug("Fuzzified %s=%.3f -> %s", 
                           input_name, crisp_value, fuzzified_output)
         return fuzzified_output

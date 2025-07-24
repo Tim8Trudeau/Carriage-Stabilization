@@ -1,5 +1,4 @@
 import pytest
-import json
 from sensor.imu_driver import IMU_Driver
 import numpy as np
 
