@@ -37,7 +37,7 @@ def setup_logging(log_level=logging.DEBUG):
     # List of loggers to configure
     loggers = [
         'main', 'controller', 'fuzzifier', 'rule_engine', 'defuzzifier',
-        'sensor', 'motor', 'profiler'
+        'spi', 'imu', 'motor', 'profiler'
     ]
 
     for name in loggers:

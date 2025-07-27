@@ -28,10 +28,11 @@ class SPIBus:
             # Fallback to mock if on unsupported platform (e.g., Windows)
             spi_log.warning("Using mock SPIBus due to: %s", e)
             try:
-                from test.mocks.mock_spi import SPIBus as SPIBus
-                mock_spi = SPIBus()
+                mock_spi = MockSPIBus()
                 self.spi = mock_spi.spi
-                self.cs_pin = mock_spi.cs_pin  should this be MockDigitalInOut
+                self.cs_pin = mock_spi.cs_pin
+                self.pi = mock_spi  # <<== Fix: provide compatible mock object
+
             except ImportError as mock_error:
                 spi_log.error("Mock SPIBus could not be loaded: %s", mock_error)
                 self.spi = None
@@ -46,7 +47,7 @@ class SPIBus:
             register (int): Register address to read from.
             buffer (bytearray): Buffer to fill with data read from SPI device.
         """
-        if not self.spi or not self.pi: &&&&&&&&&&&& self.pi is missing. 
+        if not self.spi or not self.pi:
         # from mock_spi we call self.cs_pin = MockDigitalInOut(MockBoard.SEL)
             raise RuntimeError("SPI bus or pigpio not initialized")
 
@@ -56,7 +57,6 @@ class SPIBus:
                 pass
 
             self.spi.configure(baudrate=1_000_000, phase=0, polarity=0)
-            &&&&&&&&&  No self.pi
             self.pi.write(self.cs_pin, 0)  # CS low (select)
             self.spi.write(bytes([register | 0x80]))  # MSB set for read
             self.spi.readinto(buffer)

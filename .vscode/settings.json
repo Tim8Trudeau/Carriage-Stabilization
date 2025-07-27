@@ -1,29 +1,49 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
+  "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
 
-    "files.associations": {
+  "files.associations": {
     "*.json5": "json"
-  }
-   // Linting (Ruff)
-    "python.linting.enabled": true,
-    "python.linting.ruffEnabled": true,
-    "python.linting.flake8Enabled": false,
-    "python.linting.pylintEnabled": false,
-    "python.linting.mypyEnabled": false,
+  },
 
-    // Testing (pytest, only unit)
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": [
-        "test",          // search from the test/ folder
-     ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  // Linting (Ruff)
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "python.linting.ruffArgs": [
+    "--select=ALL",
+    "--ignore=W291"
+  ],
+  "python.linting.flake8Enabled": false,
+  "python.linting.pylintEnabled": false,
+  "python.linting.mypyEnabled": false,
 
-    // Python import resolution
-    "python.analysis.extraPaths": [
-        "./"
-    ],
+  // Use Ruff as formatter
+  "editor.defaultFormatter": "charliermarsh.ruff",
+  "editor.formatOnSave": true,
 
-    // Editor preferences
-    "editor.rulers": [88],
+  // Pylance / Pyright support
+  "python.languageServer": "Pylance",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.exclude": [
+    "**/__pycache__",
+    "**/build",
+    "**/dist"
+  ],
+
+  // Testing (pytest, only unit)
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": [
+    "test"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+  // Python import resolution
+  "python.analysis.extraPaths": [
+    "./"
+  ],
+
+  // Editor preferences
+  "editor.rulers": [88]
 }

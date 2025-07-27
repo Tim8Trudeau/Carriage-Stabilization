@@ -69,3 +69,11 @@ class SPIBus:
         self.spi.readinto(buffer)
         self.cs_pin.value = True
         self.spi.unlock()
+
+    def write(self, pin, value):
+        # simulate setting pin state
+        imu_log.debug("Mock write to pin %s: %d", pin, value)
+
+    def set_mode(self, pin, mode):
+        # simulate setting pin mode
+        imu_log.debug("Mock set_mode for pin %s: %d", pin, mode)

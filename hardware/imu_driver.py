@@ -60,7 +60,7 @@ class IMU_Driver:
             tuple: (theta, omega) each as a float in range [-1.0, 1.0]
         """
         buffer = bytearray(6)
-        self.spi.readfrom_into(0x00, buffer)
+clear        self.spi.readfrom_into(0x00, buffer)
 
         raw_y = int.from_bytes(buffer[0:2], 'little', signed=True)
         raw_x = int.from_bytes(buffer[2:4], 'little', signed=True)
