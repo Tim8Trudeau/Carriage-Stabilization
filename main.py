@@ -2,9 +2,9 @@
 Main entry point for the Carriage Stabilization application.
 
 This script initializes all components of the Fuzzy Logic Controller system,
-including the sensor driver, the FLC itself, and the motor driver. It then
+including the imu_sensor driver, the FLC itself, and the motor driver. It then
 runs a continuous control loop at a fixed frequency, orchestrating the flow
-of data from sensor to motor to stabilize the carriage.
+of data from imu_sensor to motor to stabilize the carriage.
 """
 
 import time
@@ -13,9 +13,9 @@ import logging
 
 from utils.logger import setup_logging
 from utils.profiler import CodeProfiler
-from sensor.imu_driver import IMU_Driver
+from hardware.imu_driver import IMU_Driver
 from flc.controller import FLCController
-from hardware.motor_driver import MotorDriver
+from hardware.pwm_driver import DualPWMController
 
 # Setup logging first
 setup_logging()
@@ -44,9 +44,14 @@ def main_control_loop():
     loop_period = 1.0 / target_hz
 
     try:
-        sensor = IMU_Driver(config['iir_filter'], config['controller_params'])
+        iir_filter = config.get('iir_filter', {})
+        controller_params = config.get('controller_params', {})
+        # init the accel and gyro
+        imu_sensor = IMU_Driver(iir_filter, controller_params)
+        # get FLC configurations
         flc = FLCController(config)
-        motor = MotorDriver()
+        # init the motor PWM driver
+        motor = DualPWMController()
         main_log.info("All components initialized successfully.")
     except Exception as e:
         main_log.error("FATAL: Failed to initialize components: %s", e, exc_info=True)
@@ -61,8 +66,8 @@ def main_control_loop():
             loop_start_time = time.perf_counter()
 
             with CodeProfiler("Control Loop"):
-                # a. Read and process sensor data
-                norm_theta, norm_omega = sensor.get_processed_inputs()
+                # a. Read and process imu_sensor data
+                norm_theta, norm_omega = imu_sensor.read_normalized()
 
                 # b. Calculate motor command with FLC
                 motor_cmd = flc.calculate_motor_cmd(norm_theta, norm_omega)

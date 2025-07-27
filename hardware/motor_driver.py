@@ -1,5 +1,5 @@
 import logging
-from .mock_pigpio import MockPigpio
+from ..test.mocks.mock_pigpio import MockPigpio
 
 """
 Driver for the H-Bridge motor controller.
@@ -10,9 +10,9 @@ needed by the motor hardware. The pigio module generates the PWM output using
 the hardware PWM0 channel (output on gpio_18 pin 12)
 """
 
-# Mock busio for Windows development
+# Mock pigio for Windows development
 try:
-    import busio
+    import pigio
 except (ImportError, NotImplementedError):
     print("Warning: 'busio' not found. Using mock I2C for development.")
     class MockI2C:

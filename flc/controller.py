@@ -3,7 +3,8 @@ Orchestrates the Fuzzy Logic Controller (FLC) operations.
 
 This module integrates the Fuzzifier, Rule Engine, and Defuzzifier to process
 sensor inputs and compute a final motor command. It serves as the main
-interface to the FLC system.
+interface to the FLC system. It does not instanciate hardware.imu_driver or
+hardware.pwm_driver.
 """
 import logging
 from typing import Dict, Any

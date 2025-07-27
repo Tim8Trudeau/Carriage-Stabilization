@@ -3,7 +3,7 @@ Fuzzifies crisp input values into fuzzy sets using triangular membership functio
 
 This module takes normalized, crisp sensor readings (position and velocity) and 
 determines their degree of membership across a predefined set of fuzzy linguistic 
-variables (e.g., 'Small Error Clockwise').
+variables (e.g., 'Small Error ClockWise').
 """
 import logging
 from typing import Dict, List, Tuple
@@ -79,7 +79,11 @@ class Fuzzifier:
             degree = self._triangle(crisp_value, params)
             if degree > 0:
                 fuzzified_output[set_name] = degree
-        
+
+        # Format and log after collecting all outputs
+        formatted_output = {
+            k: f"{v:.3f}" for k, v in fuzzified_output.items()
+        }
         fuzzifier_log.debug("Fuzzified %s=%.3f -> %s", 
-                          input_name, crisp_value, fuzzified_output)
+                            input_name, crisp_value, formatted_output)
         return fuzzified_output
