@@ -42,6 +42,7 @@
     //
     // I think bias should be changed to the minimum cmd needed to move the motor. Same for all rules.
     // Setting bias to 0 for all rules to simplify motor_cmd equation. Bias may be reapplied if needed.
+    // Another option is change bias to scale use it to scale motor_cmd
     "rule_base": [
         { "rule": ["LECCW", "LVCCW"],  "output": { "theta_coeff":  3.0,  "omega_coeff":  1.0,  "bias":  0 } },
         { "rule": ["LECCW", "SVCCW"],  "output": { "theta_coeff":  3.0,  "omega_coeff":  0.5,  "bias":  0 } },

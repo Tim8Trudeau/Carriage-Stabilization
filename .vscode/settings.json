@@ -1,10 +1,8 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
-
   "files.associations": {
     "*.json5": "json"
   },
-
   // Linting (Ruff)
   "python.linting.enabled": true,
   "python.linting.ruffEnabled": true,
@@ -15,11 +13,9 @@
   "python.linting.flake8Enabled": false,
   "python.linting.pylintEnabled": false,
   "python.linting.mypyEnabled": false,
-
   // Use Ruff as formatter
   "editor.defaultFormatter": "charliermarsh.ruff",
   "editor.formatOnSave": true,
-
   // Pylance / Pyright support
   "python.languageServer": "Pylance",
   "python.analysis.typeCheckingMode": "basic",
@@ -30,7 +26,9 @@
     "**/build",
     "**/dist"
   ],
-
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none"
+  },
   // Testing (pytest, only unit)
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": [
@@ -38,12 +36,12 @@
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
-
   // Python import resolution
   "python.analysis.extraPaths": [
     "./"
   ],
-
   // Editor preferences
-  "editor.rulers": [88]
+  "editor.rulers": [
+    88
+  ]
 }

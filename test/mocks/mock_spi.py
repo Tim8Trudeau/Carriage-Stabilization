@@ -1,10 +1,13 @@
 # test/mocks/mock_spi.py
 
 import logging
-imu_log = logging.getLogger('imu_log')
+
+imu_log = logging.getLogger("imu_log")
+
 
 class MockBoard:
     """Fake board with pin definitions."""
+
     SEL = "MOCK_SEL"
     SCK = "MOCK_SCK"
     MOSI = "MOCK_MOSI"
@@ -13,6 +16,7 @@ class MockBoard:
 
 class MockDigitalInOut:
     """Simulates digital I/O pin."""
+
     def __init__(self, pin):
         self.pin = pin
         self.direction = None
@@ -24,10 +28,12 @@ class MockDigitalInOut:
 
 class MockSPI:
     """Mock SPI bus implementation for tests."""
+
     def __init__(self):
         self.configured = False
         self.locked = False
         self.read_log = []
+        self.step = 0  # simple time counter
 
     def try_lock(self):
         self.locked = True
@@ -46,16 +52,25 @@ class MockSPI:
         imu_log.debug("MockSPI write: %s", data)
 
     def readinto(self, buffer):
-        # Simulate dummy IMU output: [Y_L, Y_H, X_L, X_H, Ω_L, Ω_H]
-        dummy = [0x00, 0x00, 0x10, 0x00, 0x20, 0x00]  # Raw X = 16, Ω = 32
-        for i in range(len(buffer)):
-            buffer[i] = dummy[i]
-        self.read_log.append(buffer[:])
+        # Simulate raw input cycling from -16000 to +16000
+        import math
+
+        x = int(16000 * math.sin(self.step * 0.1))  # radial component
+        y = int(16000 * math.cos(self.step * 0.1))  # tangential component
+        omega = int(8000 * math.cos(self.step * 0.1))  # omega input
+
+        buffer[0:2] = y.to_bytes(2, "little", signed=True)
+        buffer[2:4] = x.to_bytes(2, "little", signed=True)
+        buffer[4:6] = omega.to_bytes(2, "little", signed=True)
+
+        self.step += 1
         imu_log.debug("MockSPI readinto: %s", list(buffer))
+        return buffer
 
 
 class SPIBus:
     """Mock SPIBus to match hardware.spi_driver.SPIBus."""
+
     def __init__(self):
         self.cs_pin = MockDigitalInOut(MockBoard.SEL)
         self.spi = MockSPI()

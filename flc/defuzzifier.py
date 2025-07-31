@@ -4,10 +4,12 @@ Computes the final crisp output from the aggregated fuzzy rule outputs.
 This module implements the defuzzification process for a Sugeno-type system,
 which calculates the weighted average of the outputs of all active fuzzy rules.
 """
+
 import logging
 from typing import List, Tuple
 
-defuzzifier_log = logging.getLogger('defuzzifier')
+defuzzifier_log = logging.getLogger("defuzzifier")
+
 
 class Defuzzifier:
     """Performs Sugeno-style weighted average defuzzification."""
@@ -48,19 +50,21 @@ class Defuzzifier:
             return 0.0
 
         final_output = numerator / denominator
-        
+
         # Clamp output to the normalized range [-1.0, 1.0] as a safety measure
         final_output_clamped = max(-1.0, min(1.0, final_output))
 
         if final_output != final_output_clamped:
             defuzzifier_log.warning(
                 "Defuzzified output %.4f was outside range and clamped to %.4f.",
-                final_output, final_output_clamped
+                final_output,
+                final_output_clamped,
             )
             final_output = final_output_clamped
-            
+
         defuzzifier_log.debug(
             "Defuzzified output: %.4f (from %d active rules)",
-            final_output, len(rule_outputs)
+            final_output,
+            len(rule_outputs),
         )
         return final_output

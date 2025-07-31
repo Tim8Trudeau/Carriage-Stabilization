@@ -19,7 +19,8 @@ from hardware.pwm_driver import DualPWMController
 
 # Setup logging first
 setup_logging()
-main_log = logging.getLogger('main')
+main_log = logging.getLogger("main")
+
 
 def main_control_loop():
     """
@@ -29,23 +30,25 @@ def main_control_loop():
 
     # --- 1. Load Configuration ---
     try:
-        with open('config/flc_config.json5', 'r') as f:
+        with open("config/flc_config.json5", "r") as f:
             config = json5.load(f)
         main_log.info("Configuration file 'flc_config.json5' loaded.")
     except FileNotFoundError:
         main_log.error("FATAL: Configuration file not found. Exiting.")
         return
-    except json5.JSONDecodeError:
-        main_log.error("FATAL: Configuration file is not valid JSON5. Exiting.")
+    except Exception as e:
+        main_log.error(
+            "FATAL: Configuration file is not valid JSON5. Exiting. Error: %s", e
+        )
         return
 
     # --- 2. Initialize Components ---
-    target_hz = config['controller_params']['TARGET_HZ']
+    target_hz = config["controller_params"]["TARGET_HZ"]
     loop_period = 1.0 / target_hz
 
     try:
-        iir_filter = config.get('iir_filter', {})
-        controller_params = config.get('controller_params', {})
+        iir_filter = config.get("iir_filter", {})
+        controller_params = config.get("controller_params", {})
         # init the accel and gyro
         imu_sensor = IMU_Driver(iir_filter, controller_params)
         # get FLC configurations
@@ -58,9 +61,12 @@ def main_control_loop():
         return
 
     # --- 3. Run Control Loop ---
-    main_log.info("Starting control loop at %.1f Hz (%.1f ms period)...",
-                  target_hz, loop_period * 1000)
-    
+    main_log.info(
+        "Starting control loop at %.1f Hz (%.1f ms period)...",
+        target_hz,
+        loop_period * 1000,
+    )
+
     try:
         while True:
             loop_start_time = time.perf_counter()
@@ -69,10 +75,10 @@ def main_control_loop():
                 # a. Read and process imu_sensor data
                 norm_theta, norm_omega = imu_sensor.read_normalized()
 
-                # b. Calculate motor command with FLC
+                # b. Calculate motor command with FLC. Range +1 to -1
                 motor_cmd = flc.calculate_motor_cmd(norm_theta, norm_omega)
 
-                # c. Send command to motor
+                # c. Send PWM command to motor
                 motor.set_speed(motor_cmd)
 
             # d. Maintain control rate
@@ -81,19 +87,24 @@ def main_control_loop():
             if sleep_time > 0:
                 time.sleep(sleep_time)
             else:
-                main_log.warning("Loop overrun: Processing time (%.2fms) exceeded period (%.2fms)",
-                                 processing_time * 1000, loop_period * 1000)
+                main_log.warning(
+                    "Loop overrun: Processing time (%.2fms) exceeded period (%.2fms)",
+                    processing_time * 1000,
+                    loop_period * 1000,
+                )
 
     except KeyboardInterrupt:
         main_log.info("Keyboard interrupt received. Shutting down.")
     except Exception as e:
-        main_log.critical("An unhandled exception occurred in the main loop: %s",
-                          e, exc_info=True)
+        main_log.critical(
+            "An unhandled exception occurred in the main loop: %s", e, exc_info=True
+        )
     finally:
         # Ensure the motor is stopped on exit
         main_log.info("Setting motor speed to 0.")
-        motor.set_speed(0.0)
+        motor.stop()
         main_log.info("Application finished.")
+
 
 if __name__ == "__main__":
     main_control_loop()
