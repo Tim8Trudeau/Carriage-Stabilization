@@ -39,6 +39,7 @@ class RuleEngine:
         fuzzified_omega: Dict[str, float],
         crisp_theta: float,
         crisp_omega: float,
+        plot: bool = False,
     ) -> List[Tuple[float, float]]:
         """
         Evaluates all rules in the rule base.
@@ -61,7 +62,7 @@ class RuleEngine:
             plot (bool): If True, generates a plot of the rule firing strengths
                 and outputs. Defaults to False.
         """
-        plot = True
+        # plot = True
         if plot:
             from utils.rule_trace import trace_rule_firing
 

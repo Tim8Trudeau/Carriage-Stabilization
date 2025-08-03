@@ -68,8 +68,8 @@ class DualPWMController:
            expects a dutycycle between 0 and 1,000,000, or duty cycle in uSec
         Args:
             value (int): float in range [-1, +1]
-                         - Positive: PWM0 active on GPIO 18
-                         - Negative: PWM1 active on GPIO 19
+                         - Positive value: PWM0 active on GPIO 18
+                         - Negative value: PWM1 active on GPIO 19
                          - Zero: both outputs inactive (low)
         Returns:
             None
@@ -98,7 +98,7 @@ class DualPWMController:
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
 
         motor_log.debug(
-            "PWM_0 Dutycyle %d,  PWM_1 Dutycyle %d",
+            "CW PWM_0 Dutycyle %d,  CCW PWM_1 Dutycyle %d",
             self.duty_cycle_0,
             self.duty_cycle_1,
         )

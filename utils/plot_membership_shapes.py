@@ -7,20 +7,26 @@ import os
 
 def plot_membership_functions(mf_data, title, save=False, output_dir="plots"):
     """
-    Plot triangular membership functions from config and optionally save to PNG.
+    Plot triangular and trapezoidal membership functions from config.
 
     Args:
-        mf_data (dict): Dictionary of label -> [left, peak, right]
+        mf_data (dict): Dictionary of label -> list of shape points
         title (str): Title of the plot
         save (bool): Whether to save the plot as a PNG
         output_dir (str): Directory to save the plot
     """
     plt.figure(figsize=(8, 4))
     for label, points in mf_data.items():
-        x = points
-        y = [0, 1, 0]
-        plt.plot(x, y, label=label)
-        plt.fill_between(x, y, alpha=0.1)
+        if len(points) == 3:
+            y = [0, 1, 0]  # Triangle
+        elif len(points) == 4:
+            y = [0, 1, 1, 0]  # Trapezoid
+        else:
+            print(f"Warning: Unsupported shape for {label}: {points}")
+            continue
+
+        plt.plot(points, y, label=label)
+        plt.fill_between(points, y, alpha=0.1)
 
     plt.title(f"Membership Functions – {title}")
     plt.xlabel("Normalized Value")

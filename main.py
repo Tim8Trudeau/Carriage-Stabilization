@@ -87,11 +87,12 @@ def main_control_loop():
             if sleep_time > 0:
                 time.sleep(sleep_time)
             else:
-                main_log.warning(
-                    "Loop overrun: Processing time (%.2fms) exceeded period (%.2fms)",
-                    processing_time * 1000,
-                    loop_period * 1000,
-                )
+                pass
+                # main_log.warning(
+                #     "Loop overrun: Processing time (%.2fms) exceeded period (%.2fms)",
+                #     processing_time * 1000,
+                #     loop_period * 1000,
+                # )
 
     except KeyboardInterrupt:
         main_log.info("Keyboard interrupt received. Shutting down.")

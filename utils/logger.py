@@ -25,8 +25,8 @@ def setup_logging(log_level=logging.DEBUG):
     os.makedirs("logs", exist_ok=True)
 
     formatter = logging.Formatter(
-        "%(asctime)s.%(msecs)03d|%(name)-12s|%(levelname)-8s| %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        "%(asctime)s.%(msecs)03d | %(message)s",
+        datefmt="%m-%d %H:%M:%S.%f"[:-3],  # Exclude year from date format,
     )
 
     console_handler = logging.StreamHandler()

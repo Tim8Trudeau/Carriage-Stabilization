@@ -6,6 +6,7 @@ sensor inputs and compute a final motor command. It serves as the main
 interface to the FLC system. It does not instanciate hardware.imu_driver or
 hardware.pwm_driver.
 """
+
 import logging
 from typing import Dict, Any
 
@@ -13,12 +14,13 @@ from flc.fuzzifier import Fuzzifier
 from flc.rule_engine import RuleEngine
 from flc.defuzzifier import Defuzzifier
 
-controller_log = logging.getLogger('controller')
+controller_log = logging.getLogger("controller")
+
 
 class FLCController:
     """
     The main Fuzzy Logic Controller class.
-    
+
     This class coordinates the entire fuzzy inference process, from receiving
     crisp inputs to producing a final crisp output.
 
@@ -27,6 +29,7 @@ class FLCController:
         rule_engine (RuleEngine): The rule engine instance.
         defuzzifier (Defuzzifier): The defuzzifier instance.
     """
+
     def __init__(self, config: Dict[str, Any]):
         """
         Initializes the FLC by setting up its components.
@@ -35,8 +38,8 @@ class FLCController:
             config (Dict[str, Any]): The full configuration dictionary, which
                 contains parameters for all sub-modules.
         """
-        mf_params = config.get('membership_functions', {})
-        rule_base = config.get('rule_base', [])
+        mf_params = config.get("membership_functions", {})
+        rule_base = config.get("rule_base", [])
 
         self.fuzzifier = Fuzzifier(mf_params)
         self.rule_engine = RuleEngine(rule_base)
@@ -54,12 +57,13 @@ class FLCController:
         Returns:
             float: The calculated normalized motor command, in the range [-1.0, 1.0].
         """
-        controller_log.debug("--- FLC Cycle Start (theta=%.3f, omega=%.3f) ---", 
-                           theta, omega)
+        controller_log.debug(
+            "--- FLC Cycle Start (theta=%.3f, omega=%.3f) ---", theta, omega
+        )
 
-        # 1. Fuzzification
-        fuzzified_theta = self.fuzzifier.fuzzify('theta', theta)
-        fuzzified_omega = self.fuzzifier.fuzzify('omega', omega)
+        # 1. Fuzzification - Range for theta and omega is [-1.0, +1.0]
+        fuzzified_theta = self.fuzzifier.fuzzify("theta", theta)
+        fuzzified_omega = self.fuzzifier.fuzzify("omega", omega)
 
         # 2. Rule Evaluation
         rule_outputs = self.rule_engine.evaluate(
@@ -68,7 +72,6 @@ class FLCController:
 
         # 3. Defuzzification
         motor_cmd = self.defuzzifier.defuzzify(rule_outputs)
-        
+
         controller_log.debug("--- FLC Cycle End (motor_cmd=%.4f) ---", motor_cmd)
         return motor_cmd
-

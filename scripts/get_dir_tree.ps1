@@ -1,4 +1,9 @@
-$base = Resolve-Path "Carriage Stabilization"
+"""
+Run this script in powershell while at the project root (directory above the script's location)
+> .\scripts\get_dir_tree.ps1
+"""
+
+$base = Get-Location
 
 function Show-PyTree {
     param (

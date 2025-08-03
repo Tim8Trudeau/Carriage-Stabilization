@@ -4,8 +4,11 @@
 Driver for the inertial measurement unit (IMU).
 
 This module reads from the accelerometer/gyro, applies a low-pass filter, and
-outputs normalized values for theta and omega in range [-1.0, +1.0].
-
+outputs normalized values for
+theta in range [-1.5, +1.5] and
+omega in range [-1.0, +1.0].
+The IMU accelerometer is set 2g max and gyro is set to 250dps max.
+The IMU is accessed via SPI, and the driver is designed to work on Raspberry Pi.
 Mock SPI is used on non-Raspberry Pi platforms for development.
 """
 
@@ -15,11 +18,10 @@ from scipy.signal import butter
 import math
 import logging
 from hardware.spi_driver import SPIBus  # will use mock_spi if needed
-
-imu_log = logging.getLogger("imu")
-
 from typing import Tuple
 from typing import cast
+
+imu_log = logging.getLogger("imu")
 
 
 def get_lowpass_coefficients(
@@ -57,9 +59,6 @@ class IMU_Driver:
             controller_params (dict): Dictionary with 'THETA_RANGE_RAD' and
                 'OMEGA_RANGE_RAD_S'.
         """
-        self.theta_range = controller_params.get("THETA_RANGE_RAD", np.pi)
-        self.omega_range = controller_params.get("OMEGA_RANGE_RAD_S", 1.0)
-
         try:
             self.cs_pin = 5
             self.spi = SPIBus(cs_pin=self.cs_pin)
@@ -67,43 +66,60 @@ class IMU_Driver:
         except Exception as e:
             imu_log.warning("SPIBus fallback due to: %s", e)
             self.spi = None
+        # ********************************************************************************
+        self.sample_rate_hz = iir_params["SAMPLE_RATE_HZ"]
+        self.cutoff_freq_hz = iir_params["CUTOFF_FREQ_HZ"]
 
-        fs = iir_params["SAMPLE_RATE_HZ"]
-        fc = iir_params["CUTOFF_FREQ_HZ"]
-        nyq = 0.5 * fs
-        normal_cutoff = fc / nyq
-
-        from typing import Tuple
-
+        nyquist = 0.5 * self.sample_rate_hz
+        normal_cutoff = self.cutoff_freq_hz / nyquist
         self.b_iir, self.a_iir = get_lowpass_coefficients(1, normal_cutoff)
 
-        self.zi = np.zeros((max(len(self.a_iir), len(self.b_iir)) - 1, 3))
-        imu_log.info("IIR filter created for fs=%.1f Hz, fc=%.1f Hz", fs, fc)
+        imu_log.info("IIR filter coefficients: b=%s, a=%s", self.b_iir, self.a_iir)
+        self.theta_range = controller_params.get("THETA_RANGE_RAD", math.pi / 2)
+        self.omega_range = controller_params.get("OMEGA_RANGE_RAD_S", math.pi)
+        self.gyro_full_scale_dps = controller_params.get("GYRO_FULL_SCALE_DPS", 250.0)
+
+        self.prev_omega_vals = [0.0]
+        self.prev_filtered_vals = [0.0]
 
     def read_normalized(self):
         """
         Reads 6 bytes of data from the IMU and returns normalized theta and omega.
 
         Returns:
-            tuple: (theta, omega) each as a float in range [-1.0, 1.0]
+            tuple: (theta, omega) each as a float in range
+             theta [-1.5, 1.5]
+             omega [-1.0, 1.0]
         """
         buffer = bytearray(6)
+        self.spi.readfrom_into(0x00, buffer)  # type: ignore
 
-        self.spi.readfrom_into(0x00, buffer)
-
+        # Extract raw 16-bit signed values
         raw_y = int.from_bytes(buffer[0:2], "little", signed=True)
         raw_x = int.from_bytes(buffer[2:4], "little", signed=True)
         raw_omega = int.from_bytes(buffer[4:6], "little", signed=True)
 
-        # Normalize raw accelerometer readings to [-1.0, +1.0]
-        norm_x = raw_x / 32768.0
-        norm_y = raw_y / 32768.0
+        # Compute theta from atan2(x, y) so 0 is at top of circle
+        theta_rads = math.atan2(raw_x, raw_y)  # 0 radians at top (y=1)
+        theta_norm = theta_rads / (math.pi / 2.0)  # Normalize to [-1.0, +1.0]
 
-        # Calculate theta from atan2(y, x)
-        theta = math.atan2(norm_y, norm_x)  # Result in radians, range [-π, π]
-        omega = raw_omega / 32768.0 * self.omega_range
+        print(
+            f"Theta_rads: {theta_rads:.2f}, Theta_norm: {theta_norm:.2f} raw_x: {raw_x}, raw_y: {raw_y}"
+        )
+        # Normalize angular velocity
+        omega_dps = raw_omega * self.gyro_full_scale_dps / 32768.0
+        omega_norm = omega_dps * (math.pi / 180.0) / self.omega_range
 
-        imu_log.debug("Raw Y: %d, Raw X: %d, Raw Omega: %d", raw_y, raw_x, raw_omega)
-        imu_log.debug("Theta: %.3f rad, Omega: %.3f rad/s", theta, omega)
+        # Optional debug info
+        theta_deg = math.degrees(theta_rads)
+        imu_log.debug(
+            "Theta_norm %.2f Theta: %.2f°, Omega_dps: %.2f°/s | Raw(x=%d, y=%d, ω=%d)",
+            theta_norm,
+            theta_deg,
+            omega_dps,
+            raw_x,
+            raw_y,
+            raw_omega,
+        )
 
-        return theta, omega
+        return theta_norm, omega_norm
