@@ -61,7 +61,7 @@ class RuleEngine:
             plot (bool): If True, generates a plot of the rule firing strengths
                 and outputs. Defaults to False.
         """
-        plot = True
+        plot = False
         if plot:
             from utils.rule_trace import trace_rule_firing
 
@@ -74,7 +74,7 @@ class RuleEngine:
                 fuzzified_omega,
                 crisp_theta,
                 crisp_omega,
-                plot=True,
+                plot=False,
             )
 
         # Log the rule firing details

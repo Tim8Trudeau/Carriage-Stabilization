@@ -1,11 +1,10 @@
 import os
 import tomllib
 import matplotlib.pyplot as plt
-import re
 import numpy as np
 
 
-def plot_membership_with_motor_cmd_dual_axis(config_path, log_path):
+def plot_membership_with_motor_cmd_dual_axis(config_path, theta_sweep, motor_cmds):
     # --- Load membership functions from config ---
     with open(config_path, "rb") as f:
         config = tomllib.load(f)
@@ -17,25 +16,6 @@ def plot_membership_with_motor_cmd_dual_axis(config_path, log_path):
         all_points.extend(points)
     min_theta = min(all_points)
     max_theta = max(all_points)
-
-    # --- Load (theta, motor_cmd) pairs from controller.log ---
-    thetas = []
-    motor_cmds = []
-    if os.path.exists(log_path):
-        with open(log_path, "r") as f:
-            current_theta = None
-            for line in f:
-                m = re.search(r"FLC Cycle Start \(theta=\s*([-\d.]+)", line)
-                if m:
-                    current_theta = float(m.group(1))
-                n = re.search(r"FLC Cycle End \(motor_cmd=\s*([-\d.]+)", line)
-                if n and current_theta is not None:
-                    motor_cmd = float(n.group(1))
-                    thetas.append(current_theta)
-                    motor_cmds.append(motor_cmd)
-                    current_theta = None
-    else:
-        print(f"controller.log not found at: {log_path}")
 
     # --- Plot membership functions on the left axis ---
     fig, ax1 = plt.subplots(figsize=(12, 6))
@@ -60,25 +40,28 @@ def plot_membership_with_motor_cmd_dual_axis(config_path, log_path):
     ax1.grid(True)
     ax1.legend(loc="upper left")
 
-    # --- Overlay motor_cmd data on the right axis ---
-    if thetas and motor_cmds:
+    # --- Overlay swept motor_cmd data on the right axis ---
+    if (
+        theta_sweep is not None
+        and motor_cmds is not None
+        and len(theta_sweep) > 0
+        and len(motor_cmds) > 0
+    ):
         ax2 = ax1.twinx()
         ax2.scatter(
-            thetas,
+            theta_sweep,
             motor_cmds,
             color="red",
             s=20,
             edgecolors="black",
             linewidths=0.8,
-            label="motor_cmd data",
+            label="motor_cmd (FLC sweep)",
             zorder=10,
         )
         ax2.set_ylabel("Motor Command", color="red")
         ax2.set_ylim(-1, 1)
         ax2.legend(loc="upper right")
         ax2.tick_params(axis="y", colors="red")
-    else:
-        ax2 = None
 
     plt.title(
         "Theta Membership Functions (left axis)\nMotor Command (right axis, red dots)"
@@ -88,9 +71,27 @@ def plot_membership_with_motor_cmd_dual_axis(config_path, log_path):
 
 
 if __name__ == "__main__":
+    # --- Load config and initialize FLCController ---
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(script_dir, "..", "config", "flc_config.toml")
-    log_path = os.path.join(script_dir, "..", "logs", "controller.log")
     config_path = os.path.normpath(config_path)
-    log_path = os.path.normpath(log_path)
-    plot_membership_with_motor_cmd_dual_axis(config_path, log_path)
+
+    # Import your FLCController (adjust this import if your structure is different!)
+    from flc.controller import FLCController
+
+    with open(config_path, "rb") as f:
+        config = tomllib.load(f)
+
+    flc = FLCController(config)
+
+    # --- Generate theta sweep and motor_cmds ---
+    theta_sweep = np.arange(-1.5, 1.5 + 0.001, 0.01)
+    omega_sweep = np.zeros_like(theta_sweep)
+    # omega_sweep = theta_sweep
+    motor_cmds = [
+        flc.calculate_motor_cmd(theta, omega)
+        for theta, omega in zip(theta_sweep, omega_sweep)
+    ]
+
+    # --- Plot everything ---
+    plot_membership_with_motor_cmd_dual_axis(config_path, theta_sweep, motor_cmds)

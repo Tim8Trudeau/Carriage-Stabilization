@@ -74,7 +74,7 @@ class FLCController:
 
         # 3. Defuzzification
         motor_cmd = self.defuzzifier.defuzzify(rule_outputs)
-        print(f"motor_cmd=  {motor_cmd:.4f} ")
+        # print(f"motor_cmd=  {motor_cmd:.4f} ")
         controller_log.debug("--- FLC Cycle End (motor_cmd=  %.4f) ---", motor_cmd)
         return motor_cmd
 

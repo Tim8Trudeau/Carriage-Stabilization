@@ -81,7 +81,7 @@ class MockSPI:
         buffer[4:6] = omega.to_bytes(2, "little", signed=True)
 
         # By convention if angle(theta) < 0 the rotation error is CCW
-        print(f"step: {self.step}, direction: {self.direction}")
+        # print(f"step: {self.step}, direction: {self.direction}")
 
         if (
             self.direction > 0
