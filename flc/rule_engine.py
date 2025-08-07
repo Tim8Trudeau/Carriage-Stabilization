@@ -9,9 +9,8 @@ level) and the crisp output value based on the rule's consequent function.
 import logging
 from typing import Dict, List, Tuple
 
-from _pytest.stash import T
-
 rule_engine_log = logging.getLogger("rule_engine")
+WZ_log = logging.getLogger("WZ_engine")
 
 
 class RuleEngine:
@@ -39,7 +38,7 @@ class RuleEngine:
         fuzzified_omega: Dict[str, float],
         crisp_theta: float,
         crisp_omega: float,
-        plot: bool = False,
+        plot: bool = True,
     ) -> List[Tuple[float, float]]:
         """
         Evaluates all rules in the rule base.
@@ -62,7 +61,7 @@ class RuleEngine:
             plot (bool): If True, generates a plot of the rule firing strengths
                 and outputs. Defaults to False.
         """
-        # plot = True
+        plot = True
         if plot:
             from utils.rule_trace import trace_rule_firing
 
@@ -85,7 +84,7 @@ class RuleEngine:
         # Log the input values and their fuzzified membership degrees
         # This helps in debugging and understanding the rule evaluation process.
         rule_engine_log.info(
-            "\nTheta: %.2f, fuzzy_Theta=%s\n Omega: %.2f, fuzzy_Omega=%s",
+            "\nTheta: %.2f, fuzzy_Theta=%.2s\n Omega: %.2f, fuzzy_Omega=%s",
             crisp_theta,
             fuzzified_theta,
             crisp_omega,
@@ -122,13 +121,30 @@ class RuleEngine:
                 z = z1 + z2 + z3
 
                 active_rules_output.append((firing_strength, z))
-                rule_engine_log.debug(
-                    "Rule %d fired: (IF theta is %s OR omega is %s) W=%.3f, Z=%.3f ",
+                if degree_theta > degree_omega:
+                    conseq = "theta_coeff"
+                else:
+                    conseq = "omega_coeff"
+
+                WZ_log.debug(
+                    "(\nRule# %d theta_member %s omega_member %s) Z=%.2f , Z1_theta=%.2f, Z2_omega=%.2f ",
                     i,
                     theta_set,
                     omega_set,
-                    firing_strength,
                     z,
+                    z1,
+                    z2,
+                )
+                WZ_log.debug(
+                    "crisp_theta= %.2f, degree_theta= %.2f, degree_omega= %.2f, W= %.2f conseq= %s consequent= %.2f",
+                    crisp_theta,
+                    degree_theta,
+                    degree_omega,
+                    firing_strength,
+                    conseq,
+                    consequent[conseq],
                 )
 
+            if crisp_theta < -0.1:
+                pass
         return active_rules_output

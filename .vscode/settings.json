@@ -1,24 +1,28 @@
 {
+  // --- Python Interpreter ---
   "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
+  // --- File Associations ---
   "files.associations": {
     "*.json5": "json"
   },
-  // Linting (Ruff)
+  // --- Ruff: Linting & Formatting ---
   "python.linting.enabled": true,
   "python.linting.ruffEnabled": true,
-  "python.linting.ruffArgs": [
-    "--select=ALL",
-    "--ignore=W291"
-  ],
+  // Only Ruff is enabled as linter:
   "python.linting.flake8Enabled": false,
   "python.linting.pylintEnabled": false,
   "python.linting.mypyEnabled": false,
-  // Use Ruff as formatter
+  // Customize Ruff linting arguments as needed:
+  "python.linting.ruffArgs": [
+    "--select=ALL", // Enable all rules (customize for your project)
+    "--ignore=W291" // Example: ignore trailing whitespace warning
+  ],
+  // Use Ruff for formatting (requires Ruff extension):
   "editor.defaultFormatter": "charliermarsh.ruff",
   "editor.formatOnSave": true,
-  // Pylance / Pyright support
+  // --- Pylance: Language Server & Type Checking ---
   "python.languageServer": "Pylance",
-  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.typeCheckingMode": "basic", // Set to "strict" for more checks
   "python.analysis.autoImportCompletions": true,
   "python.analysis.diagnosticMode": "openFilesOnly",
   "python.analysis.exclude": [
@@ -26,22 +30,23 @@
     "**/build",
     "**/dist"
   ],
+  // Suppress "missing imports" warnings (optional)
   "python.analysis.diagnosticSeverityOverrides": {
     "reportMissingImports": "none"
   },
-  // Testing (pytest, only unit)
+  // --- Python Testing ---
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": [
     "test"
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
-  // Python import resolution
+  // --- Import Resolution (for local modules) ---
   "python.analysis.extraPaths": [
     "./"
   ],
-  // Editor preferences
+  // --- Editor Preferences ---
   "editor.rulers": [
-    88
+    88 // Set line length ruler (matches Black/Ruff default)
   ]
 }

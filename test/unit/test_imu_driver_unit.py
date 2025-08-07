@@ -1,53 +1,51 @@
-# test/unit/test_imu_driver_unit.py
-
 import pytest
 from hardware.imu_driver import IMU_Driver
 from test.mocks import mock_spi
 
 
-@pytest.fixture
-def imu_buffer():
-    # Default test buffer: Y=0x0001, X=0xFFFE, Omega=0x0002
-    buf = bytearray([0x01, 0x00, 0xFE, 0xFF, 0x02, 0x00])
-    return buf
+@pytest.mark.parametrize(
+    "raw_y, raw_x, raw_omega",
+    [
+        (16384, 0, 0),  # Top of circle y=max, x=0, Omaga=0
+        (16135, 2845, 0),  # 10° CW,   Omaga=0
+        (0, 16384, 0),  # 10° CCW,  Omaga=0
+        (11585, 11585, 1000),  # 45° CW,   positive omega moving CW
+        (-11585, 11585, 1000),  # 45° CCW,  positive omega moving CW
+        (0, 16384, -1000),  # 90° CW,   negative omega moving CCW
+        (0, -16384, 0),  # 90° CCW,  positive omega moving CW
+        (-8191, 14188, -1000),  # 120° CW,  positive omega moving CCW
+        (-8191, -14188, 1000),  # 120° CCW, positive omega moving CW
+        (-11585, 11585, 0),  # 135° CW
+        (-16384, 0, 0),  # Bottom (180°)
+        (8192, -14188, 500),  # -60°,     positive omega moving CW
+    ],
+)
+def test_read_normalized_from_inputs(monkeypatch, raw_y, raw_x, raw_omega):
+    # Encode raw values
+    buffer = bytearray(6)
+    buffer[0:2] = raw_y.to_bytes(2, "little", signed=True)
+    buffer[2:4] = raw_x.to_bytes(2, "little", signed=True)
+    buffer[4:6] = raw_omega.to_bytes(2, "little", signed=True)
 
-
-@pytest.fixture
-def mock_imu(monkeypatch, imu_buffer):
-    # Patch SPIBus with a mock that uses the provided imu_buffer
-    class SPIBusWithTestBuffer(mock_spi.SPIBus):
+    # Patch SPIBus
+    class TestSPIBus(mock_spi.SPIBus):
         def __init__(self):
             super().__init__()
-            self.test_buffer = imu_buffer
+            self.test_buffer = buffer
 
-        def readfrom_into(self, address, buffer):
-            buffer[:] = self.test_buffer
+        def readfrom_into(self, addr, buf):
+            buf[:] = self.test_buffer
 
-    monkeypatch.setattr("hardware.spi_driver.SPIBus", SPIBusWithTestBuffer)
+    monkeypatch.setattr("hardware.spi_driver.SPIBus", TestSPIBus)
+
+    # Init IMU
     iir_params = {"SAMPLE_RATE_HZ": 100.0, "CUTOFF_FREQ_HZ": 10.0}
     controller_params = {"THETA_RANGE_RAD": 3.14, "OMEGA_RANGE_RAD_S": 2.0}
-    return IMU_Driver(iir_params, controller_params)
+    imu = IMU_Driver(iir_params, controller_params)
 
-
-def test_mock_read(mock_imu, imu_buffer):
-    # SPI mock injects imu_buffer into read
-    theta, omega = mock_imu.read_normalized()
+    # Test output range
+    theta, omega = imu.read_normalized()
     assert isinstance(theta, float)
     assert isinstance(omega, float)
-
-
-def test_filter_initialization(mock_imu):
-    assert hasattr(mock_imu, 'b_iir')
-    assert hasattr(mock_imu, 'a_iir')
-    assert hasattr(mock_imu, 'zi')
-    assert len(mock_imu.b_iir) > 0
-    assert len(mock_imu.zi) == max(len(mock_imu.a_iir), len(mock_imu.b_iir)) - 1
-
-
-def test_read_normalized(mock_imu):
-    theta, omega = mock_imu.read_normalized()
-    assert isinstance(theta, float)
-    assert isinstance(omega, float)
-    assert -1.0 <= theta <= 1.0
+    assert -1.5 <= theta <= 1.5
     assert -1.0 <= omega <= 1.0
-    

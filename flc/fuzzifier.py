@@ -122,7 +122,7 @@ class Fuzzifier:
         # Format and log after collecting all outputs
         formatted_output = {k: f"{v:.3f}" for k, v in fuzzified_output.items()}
         if input_name == "omega":
-            input_name = "O"
+            input_name = "O"  # This is to make log more legible
         fuzzifier_log.debug(
             "Fuzzified %s=  %.3f -> %s", input_name, crisp_value, formatted_output
         )

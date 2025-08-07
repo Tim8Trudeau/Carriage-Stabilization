@@ -62,14 +62,18 @@ def trace_rule_firing(
                 }
             )
 
-        plot_rule_contributions(traces)
+            plot_rule_contributions(traces, crisp_theta, crisp_omega)
 
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 
-def plot_rule_contributions(trace_data):
+def plot_rule_contributions(trace_data, crisp_theta, crisp_omega):
+    plt.title(
+        f"Rule Contributions: Firing Strength and Z Output\n"
+        f"crisp_theta = {crisp_theta:.3f}, crisp_omega = {crisp_omega:.3f}"
+    )
     labels = [f"{t['theta_set']}/{t['omega_set']}" for t in trace_data]
     ws = [t["firing_strength"] for t in trace_data]
     zs = [t["z"] for t in trace_data]
@@ -92,6 +96,15 @@ def plot_rule_contributions(trace_data):
 
     ax1.set_xticks(range(len(labels)))
     ax1.set_xticklabels(labels, rotation=45, ha="right")
+    ax1.text(
+        0.01,
+        0.99,
+        f"crisp_theta = {crisp_theta:.3f}\ncrisp_omega = {crisp_omega:.3f}",
+        transform=ax1.transAxes,
+        fontsize=11,
+        verticalalignment="top",
+        bbox=dict(facecolor="white", alpha=0.7, edgecolor="gray"),
+    )
 
     # Annotate W values on top of bars
     for i, bar in enumerate(bars):

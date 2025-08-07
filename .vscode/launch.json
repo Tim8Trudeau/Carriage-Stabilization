@@ -2,6 +2,35 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Module",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "plot_membership_shapes_motor_cmds",
+            "program": "${workspaceFolder}/utils/plot_membership_shapes.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--save"
+            ],
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        }, // .vscode/launch.json
+        {
+            "name": "Python: Plot Membership",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/utils/plot_membership_shapes.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--save"
+            ],
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
@@ -59,6 +88,6 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
-        } /*  */
+        }
     ]
 }

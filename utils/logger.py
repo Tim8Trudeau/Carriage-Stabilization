@@ -39,6 +39,7 @@ def setup_logging(log_level=logging.DEBUG):
         "controller",
         "fuzzifier",
         "rule_engine",
+        "WZ_engine",
         "defuzzifier",
         "spi",
         "imu",

@@ -8,7 +8,7 @@ of data from imu_sensor to motor to stabilize the carriage.
 """
 
 import time
-import json5
+import tomllib
 import logging
 
 from utils.logger import setup_logging
@@ -30,15 +30,15 @@ def main_control_loop():
 
     # --- 1. Load Configuration ---
     try:
-        with open("config/flc_config.json5", "r") as f:
-            config = json5.load(f)
-        main_log.info("Configuration file 'flc_config.json5' loaded.")
+        with open("config/flc_config.toml", "rb") as f:
+            config = tomllib.load(f)
+        main_log.info("Configuration file 'flc_config.toml' loaded.")
     except FileNotFoundError:
         main_log.error("FATAL: Configuration file not found. Exiting.")
         return
     except Exception as e:
         main_log.error(
-            "FATAL: Configuration file is not valid JSON5. Exiting. Error: %s", e
+            "FATAL: Configuration file is not valid toml. Exiting. Error: %s", e
         )
         return
 

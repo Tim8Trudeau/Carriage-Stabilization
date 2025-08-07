@@ -101,11 +101,11 @@ class IMU_Driver:
 
         # Compute theta from atan2(x, y) so 0 is at top of circle
         theta_rads = math.atan2(raw_x, raw_y)  # 0 radians at top (y=1)
-        theta_norm = theta_rads / (math.pi / 2.0)  # Normalize to [-1.0, +1.0]
+        theta_norm = theta_rads / (math.pi / 2.0)  # Normalize to [-1.5, +1.5]
 
-        print(
-            f"Theta_rads: {theta_rads:.2f}, Theta_norm: {theta_norm:.2f} raw_x: {raw_x}, raw_y: {raw_y}"
-        )
+        # print(
+        #     f"Theta_rads: {theta_rads:.2f}, Theta_norm: {theta_norm:.2f} raw_y: {raw_y}, raw_x: {raw_x}"
+        # )
         # Normalize angular velocity
         omega_dps = raw_omega * self.gyro_full_scale_dps / 32768.0
         omega_norm = omega_dps * (math.pi / 180.0) / self.omega_range
@@ -113,12 +113,12 @@ class IMU_Driver:
         # Optional debug info
         theta_deg = math.degrees(theta_rads)
         imu_log.debug(
-            "Theta_norm %.2f Theta: %.2f°, Omega_dps: %.2f°/s | Raw(x=%d, y=%d, ω=%d)",
+            "Theta_norm %.2f Theta: %.2f°, Omega_dps: %.2f°/s | Raw(y=%d, x=%d, ω=%d)",
             theta_norm,
             theta_deg,
             omega_dps,
-            raw_x,
             raw_y,
+            raw_x,
             raw_omega,
         )
 
