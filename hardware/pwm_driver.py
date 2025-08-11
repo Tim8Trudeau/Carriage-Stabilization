@@ -36,25 +36,24 @@ class DualPWMController:
         Args:
             frequency (int): PWM signal frequency in Hz (default: 50).
         """
+        self.freq = frequency
+        self.duty_cycle_0 = 0
+        self.duty_cycle_1 = 0
+        self.freq = frequency
+        self.gpio_pwm0 = 18
+        self.gpio_pwm1 = 19
+
         if pigpio is None:
             from test.mocks.mock_pigpio import MockPigpio
 
             self.pi = MockPigpio.pi()
-            self.freq = frequency
-            self.gpio_pwm0 = 18
-            self.gpio_pwm1 = 19
         else:
             self.pi = pigpio.pi()
-
             if not self.pi.connected():
                 raise RuntimeError("Could not connect to pigpio daemon")
-            self.freq = frequency
-            self.gpio_pwm0 = 18
-            self.gpio_pwm1 = 19
             self.pi.set_mode(self.gpio_pwm0, pigpio.OUTPUT)
             self.pi.set_mode(self.gpio_pwm1, pigpio.OUTPUT)
-            self.duty_cycle_0 = 0
-            self.duty_cycle_1 = 0
+
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
         print("Leaving DualPWMController.__init__")
@@ -75,27 +74,28 @@ class DualPWMController:
             None
 
         """
-        value = int(value * 32768)  # FLC output from float to 16bit signed int for PWM
-        if value == 0:
+        value = value  # FLC output from -1.0 to +1.0
+        # Negative value means reverse motor direction
+        if value < 0.0:
+            # Convert negative input to a positive duty_val and clamp
+            duty_val = min(-value, 1.0)  # Clamp to max 1.0
+            self.duty_cycle_0 = 0
+            # pigpio.PWM expects a duty cycle in the range [0, 1_000_000]usec
+            self.duty_cycle_1 = int(duty_val * 1_000_000)
+            self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
+            self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
+
+        elif value > 0.0:
+            duty_val = min(value, 1.0)  # Clamp to max 1.0
+            self.duty_cycle_0 = int(duty_val * 1_000_000)
+            self.duty_cycle_1 = 0
+            self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
+            self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
+        else:  # value == 0.0 Stop motor
             self.duty_cycle_0 = 0
             self.duty_cycle_1 = 0
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, 0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, 0)
-        elif value > 0:
-            duty_val = min(value, 32768)
-            # rescale again for pigpio.PWM
-            self.duty_cycle_0 = int(duty_val * 1_000_000 / 32768)
-            self.duty_cycle_1 = 0
-            self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
-            self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
-        else:
-            # Convert negative input to a positive duty_val and clamp it to the range [1, 32768]
-            duty_val = min(max(-value, 1), 32768)
-            self.duty_cycle_0 = 0
-            # rescale again for pigpio.PWM
-            self.duty_cycle_1 = int(duty_val * 1_000_000 / 32768)
-            self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
-            self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
 
         motor_log.debug(
             "CW PWM_0 Dutycyle %d,  CCW PWM_1 Dutycyle %d",

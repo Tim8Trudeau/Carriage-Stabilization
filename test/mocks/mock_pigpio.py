@@ -5,8 +5,7 @@ class MockPi:
     def __init__(self):
         self.calls = []
         self.pwm_states = {}
-        self.gpio_pwm0 = 18
-        self.gpio_pwm1 = 19
+        pass
 
     def set_mode(self, gpio, mode):
         self.calls.append(("set_mode", gpio, mode))

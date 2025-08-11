@@ -35,7 +35,7 @@ class Defuzzifier:
                 if no rules were activated.
         """
         numerator = 0.0
-        denominator = 0.0
+        denominator = 0.0001  # Avoid division by zero
 
         if not rule_outputs:
             defuzzifier_log.warning("No active rules to defuzzify. Outputting 0.")

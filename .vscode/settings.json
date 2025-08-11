@@ -19,7 +19,7 @@
   ],
   // Use Ruff for formatting (requires Ruff extension):
   "editor.defaultFormatter": "charliermarsh.ruff",
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   // --- Pylance: Language Server & Type Checking ---
   "python.languageServer": "Pylance",
   "python.analysis.typeCheckingMode": "basic", // Set to "strict" for more checks

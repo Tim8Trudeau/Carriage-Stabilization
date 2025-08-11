@@ -15,9 +15,9 @@ def patched_pwm_driver(monkeypatch):
 @pytest.mark.unit
 def test_positive_set_speed(patched_pwm_driver):
     pwm = patched_pwm_driver
-    pwm.set_speed(16384)  # 50%
+    pwm.set_speed(0.5)  # 50%
     pwm.set_speed(0)  # Stop
-    pwm.set_speed(-32768)  # 100% reverse
+    pwm.set_speed(-1.0)  # 100% reverse
     pwm.stop()
 
     pi = pwm.pi
@@ -33,9 +33,11 @@ def test_clamping(monkeypatch):
     assert pwm.pi.pwm_states[18]["dutycycle"] == 1_000_000
     pwm.set_speed(-99999)
     assert pwm.pi.pwm_states[19]["dutycycle"] == 1_000_000
-    pwm.set_speed(1)
-    assert 0 < pwm.pi.pwm_states[18]["dutycycle"] < 40000
+    pwm.set_speed(0.01)
+    assert 0 < pwm.pi.pwm_states[18]["dutycycle"] <= 10_000
     pwm.stop()
+    assert pwm.pi.pwm_states[18]["dutycycle"] == 0
+    assert pwm.pi.pwm_states[19]["dutycycle"] == 0
 
 
 @pytest.mark.unit

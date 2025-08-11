@@ -111,8 +111,9 @@ class RuleEngine:
                 # The output Z represents the corrective motor command contributed by this rule.
                 # The consequence is modeled as a linear function of the crisp inputs (theta and omega),
                 # scaled by the rule-specific coefficients: theta_coeff, omega_coeff, and a constant bias term.
-                # Typically, theta_coeff and omega_coeff have signs opposite to the input errors
+                # theta_coeff and omega_coeff must negitive to ensure that the output has opposite sign to the input
                 # so that the resulting output acts to reduce deviation and restore the system toward the setpoint.
+                # The bias term is a constant offset that can adjust the output independently of the inputs.
 
                 consequent = rule["output"]
                 z1 = consequent["theta_coeff"] * degree_theta * crisp_theta

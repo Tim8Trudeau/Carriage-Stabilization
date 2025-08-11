@@ -8,6 +8,7 @@ hardware.pwm_driver.
 """
 
 import logging
+import tomllib
 from typing import Dict, Any
 
 from flc.fuzzifier import Fuzzifier
