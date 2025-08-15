@@ -1,0 +1,56 @@
+# pyproject.toml — Carriage-Stabilization
+
+############################
+# Pytest configuration
+############################
+[tool.pytest.ini_options]
+# Be helpful on failures (-r a = show extra test summary info)
+# Keep output concise (-q). Remove -q if you prefer full verbosity.
+addopts = "-ra -q --strict-markers"
+
+# Where pytest should look for tests (adjust if your layout differs)
+testpaths = [
+  "tests",
+  "test"
+]
+
+# Uncomment to filter noisy warnings, or add your own
+# filterwarnings = [
+#   "ignore::DeprecationWarning",
+# ]
+
+############################
+# Pylint configuration
+############################
+[tool.pylint.MASTER]
+# Allow pylint to trust C-extension packages and their dynamic members
+extension-pkg-allow-list = ["pigpio"]
+
+[tool.pylint.TYPECHECK]
+# Tell pylint these dynamic members exist (avoids "no-member" warnings)
+generated-members = [
+  "spi_xfer",
+  "spi_open",
+  "spi_close",
+  "write",
+  "read",
+  "set_mode"
+]
+
+# Optional: selectively disable messages project-wide
+# (leave empty to keep pylint strict)
+[tool.pylint."MESSAGES CONTROL"]
+# disable = ["missing-docstring", "invalid-name"]
+
+############################
+# (Optional) Black/Ruff/Mypy placeholders
+############################
+# [tool.black]
+# line-length = 100
+#
+# [tool.ruff]
+# line-length = 100
+#
+# [tool.mypy]
+# python_version = "3.11"
+# warn_unused_ignores = true

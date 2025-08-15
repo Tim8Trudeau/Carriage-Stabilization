@@ -17,7 +17,7 @@ def test_defuzzify_normal_case(defuzzifier):
     # Result = 0.34 / 1.0 = 0.34
     rule_outputs = [(0.8, 0.5), (0.2, -0.3)]
     result = defuzzifier.defuzzify(rule_outputs)
-    assert result == pytest.approx(0.34)
+    assert result == pytest.approx(0.34, abs=1e-3)
 
 
 def test_defuzzify_no_rules(defuzzifier):

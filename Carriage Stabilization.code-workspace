@@ -6,6 +6,11 @@
 	],
 	"settings": {
 		"editor.find.autoFindInSelection": "multiline",
-		"python.createEnvironment.contentButton": "show"
+		"python.createEnvironment.contentButton": "show",
+		"python.languageServer": "Pylance",
+		"python.analysis.diagnosticSeverityOverrides": {
+			"reportMissingModuleSource": "none",
+			"reportShadowedImports": "none"
+		}
 	}
 }

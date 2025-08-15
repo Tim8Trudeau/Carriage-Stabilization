@@ -1,4 +1,6 @@
 {
+  "remote.SSH.enableRemoteCommand": true,
+  "remote.SSH.useLocalServer": true,
   // --- Python Interpreter ---
   "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
   // --- File Associations ---
