@@ -1,8 +1,8 @@
 {
-  "remote.SSH.enableRemoteCommand": true,
-  "remote.SSH.useLocalServer": true,
   // --- Python Interpreter ---
   "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
+  // Ensure the environment auto-activates in the terminal
+  "python.terminal.activateEnvironment": true
   // --- File Associations ---
   "files.associations": {
     "*.json5": "json"

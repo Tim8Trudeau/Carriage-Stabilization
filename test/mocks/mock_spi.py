@@ -94,3 +94,9 @@ class MockSPIBus:
 
     def close(self):
         imu_log.info("Mock SPI bus closed.")
+
+
+# ---- Back-compat exports ----
+# Old tests may import SPIBus directly from this module.
+SPIBus = MockSPIBus
+__all__ = ["MockSPIBus", "SPIBus"]
