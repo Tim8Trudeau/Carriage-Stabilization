@@ -20,6 +20,7 @@
 +-- [logs]
 +-- [plots]
 |   +-- omega_membership_functions.png
+|   +-- omega_motor_cmd.png
 |   \-- theta_membership_functions.png
 +-- [scripts]
 |   +-- clean_logs.py
@@ -52,8 +53,8 @@
 |   +-- Capture.JPG
 |   +-- logger.py
 |   +-- plot_membership_shapes.py
-|   +-- plot_omega_motor_cmds.py
-|   +-- plot_theta_motor_cmds.py
+|   +-- plot_omega_motor_cmd.py
+|   +-- plot_theta_motor_cmd.py
 |   +-- profiler.py
 |   \-- rule_trace.py
 +-- .gitignore
