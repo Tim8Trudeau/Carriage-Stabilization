@@ -52,7 +52,8 @@
 |   +-- Capture.JPG
 |   +-- logger.py
 |   +-- plot_membership_shapes.py
-|   +-- plot_membership_shapes_motor_cmds.py
+|   +-- plot_omega_motor_cmds.py
+|   +-- plot_theta_motor_cmds.py
 |   +-- profiler.py
 |   \-- rule_trace.py
 +-- .gitignore
