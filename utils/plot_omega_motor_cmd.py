@@ -2,18 +2,15 @@
 """
 Omega membership plot with motor_cmd overlay using MockSPIBus.
 
-- Pulls mock behavior and parameters from config (flc_config.toml → [controller_params.MOCK_SPI])
-- Uses the same theta/omega processing as the IMU path:
-    * theta = atan2(raw_x, raw_y)
-    * omega (raw counts) → dps → rad/s → 1st-order IIR → normalized
-- Left axis: membership functions for omega (from config)
-- Right axis: motor_cmd from FLC for samples collected via MockSPIBus
-
 Run:
-    python -m utils.plot_omega_membership_with_motor_cmd
+    python -m utils.plot_omega_motor_cmd
 Options:
     --samples N        number of mock samples (default: 600)
     --save             save figure to plots/omega_motor_cmd.png
+    --omega-mode M     override MOCK_SPI OMEGA_MODE (constant|noisy|random|none)
+    --random           Generate random omega samples (shorthand for --omega-mode random)
+    --noisy            Generate noisy omega samples (shorthand for --omega-mode noisy)
+    --constant         Generate constant omega samples (shorthand for --omega-mode constant)
 """
 
 from __future__ import annotations
@@ -40,7 +37,7 @@ def load_config(repo_root: str) -> Dict:
         return tomllib.load(f)
 
 
-def build_mock_from_config(cfg: Dict):
+def build_mock_from_config(cfg: Dict, override_omega_mode: str | None = None):
     """
     Construct test.mocks.mock_spi.MockSPIBus using controller_params.MOCK_SPI.
     Accepts nested or flat dictionaries.
@@ -55,7 +52,7 @@ def build_mock_from_config(cfg: Dict):
     spi_baud    = int(ctrl.get("SPI_BAUD", 1_000_000))
     spi_mode    = int(ctrl.get("SPI_MODE", 0))
 
-    omega_mode      = (spi_flat.get("OMEGA_MODE", "constant") or "constant")
+    omega_mode = (override_omega_mode or spi_flat.get("OMEGA_MODE", "constant") or "constant")
     omega_raw_base  = int(spi_flat.get("OMEGA_RAW_BASE", 5000))
     noise_span      = int(spi_flat.get("NOISE_SPAN", 2000))
     theta_step      = int(spi_flat.get("THETA_STEP", 5))
@@ -123,14 +120,15 @@ def plot_memberships(ax, mf_map: Dict[str, List[float]]):
     return xmin, xmax
 
 
-def collect_mock_samples(cfg: Dict, samples: int):
+def collect_mock_samples(cfg: Dict, samples: int, override_omega_mode: str | None = None):
     """
     Use MockSPIBus to produce raw y/x/omega.
     Convert to:
       theta_norm = atan2(x, y) / THETA_RANGE_RAD
       omega_norm = (IIR-filtered omega_rads) / OMEGA_RANGE_RAD_S
     """
-    mock = build_mock_from_config(cfg)
+    mock = build_mock_from_config(cfg, override_omega_mode)
+    print("USING:", mock.omega_mode, "NOISE_SPAN:", mock.noise_span)
 
     # IMU / filter params (match your IMU_Driver / config semantics)
     iir = cfg.get("iir_params", {})
@@ -171,10 +169,36 @@ def collect_mock_samples(cfg: Dict, samples: int):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Plot omega membership functions with motor_cmd overlay (MockSPIBus-driven)")
-    parser.add_argument("--samples", type=int, default=600, help="number of mock samples (default: 600)")
-    parser.add_argument("--save", action="store_true", help="save figure to plots/omega_membership_with_motor_cmd.png")
+    parser = argparse.ArgumentParser(
+        description="Plot omega membership functions with motor_cmd overlay (MockSPIBus-driven)"
+    )
+    parser.add_argument("--samples", type=int, default=600,
+                        help="number of mock samples (default: 600)")
+    parser.add_argument("--save", action="store_true",
+                        help="save figure to plots/omega_motor_cmd.png")
+
+    # Put ALL mode options in one mutually-exclusive group (prevents conflicts)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--omega-mode", choices=["constant", "noisy", "random", "none"],
+                    help="override MOCK_SPI OMEGA_MODE for this run")
+    mode.add_argument("--random",   action="store_true",
+                    help="shorthand for --omega-mode random")
+    mode.add_argument("--noisy",    action="store_true",
+                    help="shorthand for --omega-mode noisy")
+    mode.add_argument("--constant", action="store_true",
+                    help="shorthand for --omega-mode constant")
+    mode.add_argument("--none",     action="store_true",
+                    help="shorthand for --omega-mode none")
+
     args = parser.parse_args()
+
+    # Compute the override (shorthands take precedence)
+    override = args.omega_mode
+    if args.random:   override = "random"
+    elif args.noisy:  override = "noisy"
+    elif args.constant: override = "constant"
+    elif args.none:   override = "none"
+
 
     # Repo root = parent of utils/
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -188,7 +212,7 @@ def main():
     flc = FLCController(cfg)
 
     # Collect θ, ω from MockSPIBus (reflecting current config/mock behavior)
-    theta_norm, omega_norm = collect_mock_samples(cfg, args.samples)
+    theta_norm, omega_norm = collect_mock_samples(cfg, args.samples, override)
 
     # Compute motor_cmd for each sample at the measured (θ, ω)
     motor_cmds = [flc.calculate_motor_cmd(float(t), float(w)) for t, w in zip(theta_norm, omega_norm)]
