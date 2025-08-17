@@ -25,7 +25,8 @@ class MockSPIBus:
     containing the x, y, and omega values in little-endian format.
     """
 
-    def __init__(self, spi_channel=0, baud=1_000_000, mode=0, omega_mode="constant", omega_raw_base=5000, noise_span=2000):
+    def __init__(self, spi_channel=0, baud=1_000_000, io_mode=0, omega_mode="constant",
+                 omega_raw_base=5000, noise_span=2000, theta_step=5):
         """
         Args:
             spi_channel (int): SPI channel (unused in mock)
@@ -35,17 +36,16 @@ class MockSPIBus:
         """
         self.spi_channel = spi_channel
         self.baud = baud
-        self.mode = mode
-        self.omega_mode = omega_mode  # mode selector
-        self.omega_raw_base = int(omega_raw_base) # raw counts base
+        self.io_mode = io_mode
+        self.omega_mode = (omega_mode or "constant").lower()
+        self.omega_raw_base = int(omega_raw_base) # base raw value for constant mode (~38% of full scale)
         self.noise_span = int(noise_span)         # raw counts noise half-width
-        self.step = 0.0     # simulated carriage position in degrees
-        self.direction = 5  # degrees per iteration
-        self.omega_raw_base = 5000  # base raw value for constant mode (~38% of full scale)
+        self.step = 0                             # simulated initial carriage position motion in degrees
+        self.direction = theta_step               # degrees change per iteration
 
         imu_log.info(
             "Mock SPI bus initialized (mode=%s, channel=%d, baud=%d, spi_mode=%d)",
-            self.omega_mode, self.spi_channel, self.baud, self.mode
+            self.omega_mode, self.spi_channel, self.baud, self.io_mode
         )
 
     def spi_xfer(self, tx_bytes):
@@ -63,14 +63,27 @@ class MockSPIBus:
         y = int(16_384 * math.cos(math.radians(self.step)))  # radial accel
 
         # Simulated omega raw values
-        if self.omega_mode == "constant":
-            omega_raw = self.omega_raw_base
-        elif self.omega_mode == "noisy":
-            noise = random.randint(-2000, 2000)  # ±2000 raw counts noise
-            omega_raw = self.omega_raw_base + noise
-            omega_raw = max(-32768, min(32767, omega_raw))  # clamp to raw 16-bit range
-        else:
+        if self.omega_mode in ("none", "off", "0"):
             omega_raw = 0
+
+        elif self.omega_mode == "constant":
+            omega_raw = self.omega_raw_base
+
+        elif self.omega_mode == "noisy":
+            # noisy: base ± noise_span
+            noise = random.randint(-self.noise_span, self.noise_span)
+            omega_raw = self.omega_raw_base + noise
+
+        elif self.omega_mode == "random":
+            # NEW: uniform random in ±noise_span (ignores base)
+            omega_raw = random.randint(-self.noise_span, self.noise_span)
+
+        else:
+            # unknown mode -> be safe
+            omega_raw = 0
+
+        # clip to int16 range just like hardware would
+        omega_raw = max(-32768, min(32767, omega_raw))
 
         # Pack data (little endian, signed)
         buf[0:2] = y.to_bytes(2, "little", signed=True)
@@ -79,11 +92,11 @@ class MockSPIBus:
 
         # Simulate motion
         self.step += self.direction
-        if self.step > 180 or self.step < -180:
+        if self.step > 120 or self.step < -120:
             self.direction = -self.direction
 
         imu_log.debug(
-            "MockSPI xfer: step=%.1f, x=%d, y=%d, omega=%d",
+            "MockSPI xfer: pos=%.1f, x=%d, y=%d, omega=%d",
             self.step, x, y, omega_raw
         )
         return len(tx_bytes), bytes([0x00]) + buf

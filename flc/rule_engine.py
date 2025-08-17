@@ -31,6 +31,9 @@ class RuleEngine:
         """
         self.rules = rule_base
         rule_engine_log.info("Rule Engine initialized with %d rules.", len(self.rules))
+        rule_engine_log.info(
+            "W is rule firing strength and Z is the crisp output for the rule."
+        )
 
     def evaluate(
         self,
@@ -78,9 +81,6 @@ class RuleEngine:
             )
 
         # Log the rule firing details
-        rule_engine_log.info(
-            "W is rule firing strength and Z is the crisp output for the rule."
-        )
         # Log the input values and their fuzzified membership degrees
         # This helps in debugging and understanding the rule evaluation process.
         rule_engine_log.info(
@@ -137,7 +137,7 @@ class RuleEngine:
                     z2,
                 )
                 WZ_log.debug(
-                    "crisp_theta= %.2f, degree_theta= %.2f, degree_omega= %.2f, W= %.2f conseq= %s consequent= %.2f",
+                    "crisp_theta= %.2f, degree_theta= %.2f, degree_omega= %.2f, W= %.2f |%s consequent= %.2f",
                     crisp_theta,
                     degree_theta,
                     degree_omega,
