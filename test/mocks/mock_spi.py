@@ -32,7 +32,7 @@ class MockSPIBus:
             spi_channel (int): SPI channel (unused in mock)
             baud (int): baud rate (unused in mock)
             mode (int): SPI mode (unused in mock)
-            omega_mode (str): "constant" or "noisy"
+            omega_mode (str): constant, random, noisy, none
         """
         self.spi_channel = spi_channel
         self.baud = baud

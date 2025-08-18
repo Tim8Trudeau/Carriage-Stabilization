@@ -41,6 +41,8 @@ class SPIBus:
                 "pigpio SPI opened (channel=%d, baud=%d, io mode=%d)",
                 self.spi_channel, self.baud, self.io_mode
             )
+            # Define transfer method
+            # pigpio.spi_xfer() returns (count, rx_bytes)
             self._xfer = lambda tx: self.pi.spi_xfer(self.handle, tx)
 
         except Exception as e:

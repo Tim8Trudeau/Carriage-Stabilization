@@ -2,11 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Module",
+            "name": "plot_omega_motor",
             "type": "debugpy",
             "request": "launch",
-            "module": "plot_membership_shapes_motor_cmds",
-            "program": "${workspaceFolder}/utils/plot_membership_shapes.py",
+            //"module": "plot_omega_motor_cmd",
+            "program": "${workspaceFolder}/utils/plot_omega_motor_cmd.py",
             "console": "integratedTerminal",
             "args": [
                 "--save"
@@ -15,11 +15,42 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
-        }, // .vscode/launch.json
+        },
         {
-            "name": "Python: Plot Membership",
+            "name": "plot_theta_motor",
             "type": "debugpy",
             "request": "launch",
+            //"module": "plot_theta_motor_cmd",
+            "program": "${workspaceFolder}/utils/plot_theta_motor_cmd.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--save"
+            ],
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "plot_time_series",
+            "type": "debugpy",
+            "request": "launch",
+            //"module": "plot_time_series_cmd",
+            "program": "${workspaceFolder}/utils/plot_time_series_cmd.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--save"
+            ],
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "plot_membership_shapes",
+            "type": "debugpy",
+            "request": "launch",
+            //"module": "plot_membership_shapes",
             "program": "${workspaceFolder}/utils/plot_membership_shapes.py",
             "console": "integratedTerminal",
             "args": [
