@@ -55,6 +55,7 @@
 |   +-- plot_membership_shapes.py
 |   +-- plot_omega_motor_cmd.py
 |   +-- plot_theta_motor_cmd.py
+|   +-- plot_time_series_cmd.py
 |   +-- profiler.py
 |   \-- rule_trace.py
 +-- .gitignore
