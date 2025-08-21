@@ -3,9 +3,11 @@
 |   \-- flc_config.toml
 +-- [DOCS]
 |   +-- carriage circle chart.png
+|   +-- IMU dependency graph.txt
 |   +-- Lebre Cat TV Requirements.odt
 |   +-- lsm6ds3 IMU app note.pdf
-|   \-- lsm6ds3-datasheet.pdf
+|   +-- lsm6ds3-datasheet.pdf
+|   \-- Runtime sequence for IMU_Driver.txt
 +-- [flc]
 |   +-- __init__.py
 |   +-- controller.py
@@ -15,7 +17,9 @@
 +-- [hardware]
 |   +-- __init__.py
 |   +-- imu_driver.py
+|   +-- LSM6DS3TR_driver.py
 |   +-- pwm_driver.py
+|   +-- spi_bus.py
 |   \-- spi_driver.py
 +-- [logs]
 +-- [plots]
@@ -33,7 +37,8 @@
 |   |   +-- __init__.py
 |   |   \-- test_pwm_driver_integration.py
 |   +-- [mocks]
-|   |   +-- busio_mock_spi.py
+|   |   +-- __init__.py
+|   |   +-- mock_LSM6DS3TR_driver.py
 |   |   +-- mock_pigpio.py
 |   |   \-- mock_spi.py
 |   +-- [unit]
