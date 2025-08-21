@@ -1,0 +1,27 @@
+Runtime sequence for IMU_Driver.read_normalized()
+
+sequenceDiagram
+  participant Loop as FLC / main loop
+  participant IMU as IMU_Driver
+  participant DEV as LSM6DS3TR driver (real or mock)
+  participant OS as pigpio (real) / TOML (mock)
+
+  Loop->>IMU: read_normalized()
+  IMU->>DEV: readfrom_into(0x22, buf[6])
+  alt Real hardware
+    DEV->>OS: spi_xfer([addr|zeros])
+    OS-->>DEV: bytes([dummy|xL|xH|yL|yH|gL|gH])
+    DEV-->>IMU: fill buf (6 bytes)
+  else Mock
+    DEV->>DEV: synthesize (raw_x, raw_y, raw_omega)
+    DEV->>OS: (on init) load [controller_params.MOCK_SPI] from flc_config.toml
+    DEV-->>IMU: fill buf (6 bytes)
+  end
+
+  IMU->>IMU: unpack int16 LE → raw_x, raw_y, raw_omega
+  IMU->>IMU: theta_rads = atan2(raw_x, raw_y)
+  IMU->>IMU: theta_norm = clip(theta_rads / THETA_RANGE_RAD)
+  IMU->>IMU: ω_raw_filt += α*(raw_omega - ω_raw_filt)
+  IMU->>IMU: omega_norm = clip(ω_raw_filt / 32768)
+  IMU-->>Loop: (theta_norm, omega_norm)
+  IMU->>IMU: (optional) log debug/info

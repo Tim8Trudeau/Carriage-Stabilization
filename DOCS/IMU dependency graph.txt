@@ -1,0 +1,26 @@
+Component / dependency graph
+
+graph TD
+  subgraph App
+    FLC[FLC / main loop]
+  end
+
+  subgraph IMU Layer
+    IMUD[imu_driver.IMU_Driver]
+  end
+
+  subgraph Device Driver (one is active)
+    LSM[hardware/LSM6DS3TR_driver.LSM6DS3TRDriver]
+    MOCK[test/mock/mock_LSM6DS3TR_driver.MockLSM6DS3TRDriver]
+  end
+
+  subgraph OS/HW
+    PIG[pigpio (SPI)]
+    TOML[flc_config.toml]
+  end
+
+  FLC -->|calls| IMUD
+  IMUD -->|readfrom_into / read / write| LSM
+  IMUD -->|or (tests)| MOCK
+  LSM -->|spi_xfer| PIG
+  MOCK -->|loads MOCK_SPI| TOML

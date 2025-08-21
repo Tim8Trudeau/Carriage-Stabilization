@@ -7,13 +7,14 @@ MAX_WHEEL_RPM = 10.0
 # --- Controller Parameters ---
 [controller_params]
 TARGET_HZ = 50.0
-THETA_RANGE_RAD = 1.5708
-OMEGA_RANGE_RAD_S = 3.1416
-GYRO_FULL_SCALE_DPS = 250.0
+THETA_RANGE_RAD = 3.1416
+GYRO_FULL_SCALE_RADS_S = 4.363
 ACCEL_FULL_SCALE_G = 2.0
+IMU_STAT_REG = 30
+IMU_DATA_REG = 34
 
 [controller_params.MOCK_SPI]
-OMEGA_MODE = "random"       # "constant", "noisy", "random" or "none"
+OMEGA_MODE = "none"         # "constant", "noisy", "random" or "none"
 OMEGA_RAW_BASE = 2000       # not used in "random" mode
 NOISE_SPAN = 20000          # ±noise in raw counts
 THETA_STEP = 5              # Keeps theta constant when testing omega
@@ -25,13 +26,13 @@ CUTOFF_FREQ_HZ = 5.0
 
 # --- Membership Functions ---
 [membership_functions.theta]
-LECCW = [-1.57, -1.57, -1.00, -0.5]
+LECCW = [-1.6, -1.6, -1.00, -0.5]
 MECCW = [-1.00, -0.50, -0.00]
 SECCW = [-0.50, -0.25,  0.00]
 NE    = [-0.10,  0.00,  0.10]
 SECW  = [-0.00,  0.25,  0.50]
 MECW  = [ 0.00,  0.50,  1.00]
-LECW  = [ 0.50,  1.00,  1.57,  1.57]
+LECW  = [ 0.50,  1.00,  1.6,  1.6]
 
 [membership_functions.omega]
 LVCCW = [-1.5, -1.5, -1.0, -0.5]

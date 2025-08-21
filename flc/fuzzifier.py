@@ -96,7 +96,7 @@ class Fuzzifier:
 
         Args:
             input_name (str): The name of the input variable ('theta' or 'omega').
-            crisp_value (float): The normalized crisp value to fuzzify.
+            crisp_value (float): The "normalized" crisp value to fuzzify.
 
         Returns:
             Dict[str, float]: A dictionary mapping each fuzzy set name to its
@@ -106,7 +106,7 @@ class Fuzzifier:
         if input_name not in self.membership_functions:
             raise KeyError(f"No membership functions defined for input '{input_name}'")
 
-        fuzzified_output = {}
+        fuzzified_inputs = {}
         for set_name, params in self.membership_functions[input_name].items():
             if len(params) == 3:
                 degree = self._triangle(crisp_value, params)
@@ -117,11 +117,11 @@ class Fuzzifier:
                     f"Invalid membership function shape for '{set_name}': {params}"
                 )
             if degree > 0:
-                fuzzified_output[set_name] = degree
+                fuzzified_inputs[set_name] = degree
 
         # Format and log after collecting all outputs
-        formatted_output = {k: f"{v:.3f}" for k, v in fuzzified_output.items()}
+        formatted_output = {k: f"{v:.3f}" for k, v in fuzzified_inputs.items()}
         fuzzifier_log.debug(
             "Fuzzified %s=  %.3f -> %s", input_name, crisp_value, formatted_output
         )
-        return fuzzified_output
+        return fuzzified_inputs

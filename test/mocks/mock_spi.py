@@ -48,20 +48,26 @@ class MockSPIBus:
             self.omega_mode, self.spi_channel, self.baud, self.io_mode
         )
 
-    def spi_xfer(self, tx_bytes):
+    def spi_xfer(self):
         """
-        Simulate pigpio.spi_xfer(): returns (count, rx_bytes)
-        Generate raw input cycling from -16,384 to +16,384 for x and y,
-        -32,768 to +32,768 for omega.
+        Simulate pigpio.spi_xfer(): returns (count, rx_bytes). Simulation
+        can ignore the read request that normally gets sent to the IMU.
+        Generate raw IMU input, cycling x and y: range [-16,384, +16,384]
+        and radial velocity: range[-32,768, +32,768] in bytearray format.
+        The x and y values change with step, and simulates a path around a circle.
         sin/cos are reversed because step = 0 degrees is "up" (y=16384, x=0).
-
-                """
+        Omega is simulated based on the omega_mode:
+        - "constant": returns a constant raw value (e.g., 5000)
+        - "noisy": returns a base value ± noise_span
+        - "random": returns a random value in [-noise_span, +noise_span]
+        - "none": returns 0 (no rotation)
+        """
         buf = bytearray(6)
 
-        # Simulated accelerometer values
-        x = int(16_384 * math.sin(math.radians(self.step)))  # tangential accel
-        y = int(16_384 * math.cos(math.radians(self.step)))  # radial accel
-
+        # Simulated accelerometer raw output values
+        x_raw = int(16_384 * math.sin(math.radians(self.step)))  # tangential accel
+        y_raw = int(16_384 * math.cos(math.radians(self.step)))  # radial accel
+        # Limit simulated data to 1g
         # Simulated omega raw values
         if self.omega_mode in ("none", "off", "0"):
             omega_raw = 0
@@ -85,9 +91,9 @@ class MockSPIBus:
         # clip to int16 range just like hardware would
         omega_raw = max(-32768, min(32767, omega_raw))
 
-        # Pack data (little endian, signed)
-        buf[0:2] = y.to_bytes(2, "little", signed=True)
-        buf[2:4] = x.to_bytes(2, "little", signed=True)
+        # Pack raw data (little endian, signed)
+        buf[0:2] = y_raw.to_bytes(2, "little", signed=True)
+        buf[2:4] = x_raw.to_bytes(2, "little", signed=True)
         buf[4:6] = omega_raw.to_bytes(2, "little", signed=True)
 
         # Simulate motion
@@ -97,13 +103,13 @@ class MockSPIBus:
 
         imu_log.debug(
             "MockSPI xfer: pos=%.1f, x=%d, y=%d, omega=%d",
-            self.step, x, y, omega_raw
+            self.step, x_raw, y_raw, omega_raw
         )
-        return len(tx_bytes), bytes([0x00]) + buf
+        # First byte in array simulates SPI read register address
+        return buf
 
-    def readfrom_into(self, register: int, buffer: bytearray):
-        _, rx = self.spi_xfer(bytes([register | 0x80]) + bytes(len(buffer)))
-        buffer[:] = rx[1:]  # skip register echo
+    def readfrom_into(self, buffer: bytearray):
+        return self.spi_xfer()
 
     def close(self):
         imu_log.info("Mock SPI bus closed.")

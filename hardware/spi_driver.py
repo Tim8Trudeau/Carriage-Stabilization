@@ -13,14 +13,14 @@ class SPIBus:
     `mock_params` (e.g., from flc_config.toml) to parameterize the mock.
     """
 
-    def __init__(self, spi_channel=0, baud=1_000_000, io_mode=0, *, mock_params=None):
-        self.spi_channel = spi_channel
-        self.baud = baud
-        self.io_mode = io_mode
+    def __init__(self, controller_params):
+        self.spi_channel = 0
+        self.baud = 1_000_000  # 1 MHz
+        self.io_mode = 0b00  # Mode 0: CPOL=0
         self.handle = None
-        self.pi = None
         self.is_mock = False
         self._mock = None
+        self.pi = None
 
         try:
             import pigpio
@@ -54,11 +54,8 @@ class SPIBus:
             cfg = cfg_src.get("MOCK_SPI", cfg_src)  # accept either nested or flat
                                                     # mock_params structure
             self._mock = MockSPIBus(
-                spi_channel=self.spi_channel,
-                baud=self.baud,
-                io_mode=self.io_mode,
                 # Pass through simulation knobs from config
-                omega_mode=cfg.get("OMEGA_MODE", "constant"),     # "constant" | "random" | "None"
+                omega_mode=cfg.get("OMEGA_MODE", "none"),         # "constant" | "random" | "none"
                 omega_raw_base=cfg.get("OMEGA_RAW_BASE", 5000),   # raw constant counts
                 noise_span=cfg.get("NOISE_SPAN", 2000),           # raw noise ±span
                 theta_step=cfg.get("THETA_STEP", 5),              # degrees/step for theta evolution
@@ -87,7 +84,7 @@ class SPIBus:
         count, rx = self._xfer(tx)
         if count != len(tx):
             raise IOError("SPI transfer length mismatch")
-        buffer[:] = rx[1:]  # skip dummy byte
+        buffer[:] = rx[1:]  # skip dummy byte. data passed in buffer[1:]
 
     def close(self):
         if self.pi and self.handle is not None:

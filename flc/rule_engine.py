@@ -7,6 +7,7 @@ level) and the crisp output value based on the rule's consequent function.
 """
 
 import logging
+from math import e
 from typing import Dict, List, Tuple
 
 rule_engine_log = logging.getLogger("rule_engine")
@@ -64,6 +65,8 @@ class RuleEngine:
             plot (bool): If True, generates a plot of the rule firing strengths
                 and outputs. Defaults to False.
         """
+        if not fuzzified_theta:
+            pass
         plot = False
         if plot:
             from utils.rule_trace import trace_rule_firing
@@ -84,9 +87,12 @@ class RuleEngine:
         # Log the input values and their fuzzified membership degrees
         # This helps in debugging and understanding the rule evaluation process.
         rule_engine_log.info(
-            "\nTheta: %.2f, fuzzy_Theta=%.2s\n Omega: %.2f, fuzzy_Omega=%s",
+            "Theta: %.2f, fuzzy_Theta=%.2s",
             crisp_theta,
-            fuzzified_theta,
+            fuzzified_theta
+        )
+        rule_engine_log.info(
+            "Omega: %.2f, fuzzy_Omega=%s",
             crisp_omega,
             fuzzified_omega,
         )
@@ -112,7 +118,7 @@ class RuleEngine:
                 # The consequence is modeled as a linear function of the crisp inputs (theta and omega),
                 # scaled by the rule-specific coefficients: theta_coeff, omega_coeff, and a constant bias term.
                 # theta_coeff and omega_coeff must negitive to ensure that the output has opposite sign to the input
-                # so that the resulting output acts to reduce deviation and restore the system toward the setpoint.
+                # so that the resulting output acts to reduce positional error and restore the system toward the setpoint.
                 # The bias term is a constant offset that can adjust the output independently of the inputs.
 
                 consequent = rule["output"]
@@ -128,7 +134,7 @@ class RuleEngine:
                     conseq = "omega_coeff"
 
                 WZ_log.debug(
-                    "(\nRule# %d theta_member %s omega_member %s) Z=%.2f , Z1_theta=%.2f, Z2_omega=%.2f ",
+                    "(\nRule# %d (theta_member %s) (omega_member %s) Z=%.2f , Z1_theta=%.2f, Z2_omega=%.2f ",
                     i,
                     theta_set,
                     omega_set,
@@ -145,7 +151,6 @@ class RuleEngine:
                     conseq,
                     consequent[conseq],
                 )
-
-            if crisp_theta < -0.1:
-                pass
+            else:
+                WZ_log.debug("! Neither input falls in a member function !")
         return active_rules_output

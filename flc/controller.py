@@ -54,8 +54,8 @@ class FLCController:
         Executes one full cycle of the fuzzy inference system.
 
         Args:
-            theta (float): The normalized angular position error.
-            omega (float): The normalized angular velocity error.
+            theta (float): The angular position error in radians [-1.57, +1.57].
+            omega (float): The "normalized" angular velocity error [-1.0, +1.0].
 
         Returns:
             float: The calculated normalized motor command, in the range [-1.0, 1.0].
@@ -77,6 +77,7 @@ class FLCController:
         motor_cmd = self.defuzzifier.defuzzify(rule_outputs)
         # print(f"motor_cmd=  {motor_cmd:.4f} ")
         controller_log.debug("--- FLC Cycle End (motor_cmd=  %.4f) ---", motor_cmd)
+        print(f"--- FLC Cycle End (motor_cmd= {motor_cmd:.4f}) ---")
         return motor_cmd
 
 

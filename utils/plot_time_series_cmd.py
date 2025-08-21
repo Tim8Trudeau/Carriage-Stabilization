@@ -4,7 +4,7 @@ import argparse
 import tomllib
 import numpy as np
 import matplotlib.pyplot as plt
-
+from matplotlib.ticker import MultipleLocator
 from flc.controller import FLCController
 from test.mocks.mock_spi import MockSPIBus  # same source as plot_omega_motor_cmd.py
 
@@ -97,6 +97,15 @@ def run_time_series(config_path: str,
     ax1.set_xlabel("Time (s)")
     ax1.set_ylabel("Theta (deg) / Omega (deg/s)")
     ax1.grid(True)
+    # X axis: minor ticks every 1s
+    ax1.xaxis.set_minor_locator(MultipleLocator(1.0))
+
+    # Left Y axis (degrees/deg/s): minor ticks every 2°
+    ax1.yaxis.set_minor_locator(MultipleLocator(2.0))
+
+    # Make minor grid visible (dotted), keep major grid solid
+    ax1.grid(True, which="major", linewidth=0.8)
+    ax1.grid(True, which="minor", linestyle=":", alpha=0.4)
 
     # Right axis: motor command [-1, 1]
     ax2 = ax1.twinx()
@@ -149,7 +158,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     n_samples = args.samples if args.samples is not None else default_samples
-    theta_step = args.theta_step if args.theta_step is not None else 0.05
+    theta_step = args.theta_step if args.theta_step is not None else 1
 
     # Run
     run_time_series(
