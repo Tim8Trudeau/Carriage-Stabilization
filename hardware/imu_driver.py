@@ -92,9 +92,7 @@ class IMU_Driver:
             omega_norm_filt (float): low-pass filtered normalized omega in [-1.0, +1.0]
         """
         # Read 6 bytes starting at the IMU data register.
-        # Expect SPIBus to support readfrom_into(register, buffer).
-        buf = bytearray(6)
-        self.imu.readfrom_into(0x22, buf)  # same register you used before
+        buf = self.spi.imu_read()  # returns 6 bytes: x, y, omega (int16 LE each)
 
         # Unpack little-endian signed 16-bit values: x, y, gyro
         raw_x = int.from_bytes(buf[0:2], "little", signed=True)

@@ -23,53 +23,53 @@ import pytest
 )
 def test_read_normalized_from_inputs(monkeypatch, raw_y, raw_x, raw_omega):
     """
-    Adapts to refactor where IMU_Driver reads via LSM6DS3TR driver:
-    - Monkeypatch hardware.LSM6DS3TR_driver.LSM6DS3TRDriver with a fake
-    - Provide 6 bytes as (x, y, omega) int16 LE
+    IMU_Driver now calls SPIBus.imu_read() which returns a 6-byte buffer in order:
+    [raw_x L, raw_x H, raw_y L, raw_y H, raw_omega L, raw_omega H]
     """
-    # Build buffer in NEW order expected by imu_driver: raw_x, raw_y, raw_omega
+    # Build sample buffer exactly as imu_driver expects
     sample = bytearray(6)
     sample[0:2] = int(raw_x).to_bytes(2, "little", signed=True)
     sample[2:4] = int(raw_y).to_bytes(2, "little", signed=True)
     sample[4:6] = int(raw_omega).to_bytes(2, "little", signed=True)
 
-    # Fake device driver with same ctor + API shape as real one
+    # Fake IMU device class (not used directly by this test, but patched to avoid real imports)
     class FakeLSM6DS3TRDriver:
-        def __init__(self, *_, **__):
-            self._sample = sample
-        def readfrom_into(self, _reg, buf):  # pylint: disable=unused-argument
-            buf[:] = self._sample
-        def read(self, _reg, nbytes):        # pylint: disable=unused-argument
-            return bytes(self._sample[:nbytes])
-        def write(self, _reg, _data):        # pylint: disable=unused-argument
-            pass
-        def close(self):
-            pass
-
-    # No-op SPI so pigpio isn’t touched on Windows
-    class NoopSPIBus:
-        # accept arbitrary args to match real ctor signature
         def __init__(self, *_, **__):  # pylint: disable=unused-argument
             pass
+        def readfrom_into(self, _reg, _buf):  # pylint: disable=unused-argument
+            pass
+        def read(self, _reg, _n):  # pylint: disable=unused-argument
+            return b""
+        def write(self, _reg, _data):  # pylint: disable=unused-argument
+            pass
         def close(self):
             pass
 
-    # Import the module, then patch the symbols it uses
+    # No-op SPI that returns the prepared 6-byte buffer
+    class NoopSPIBus:
+        def __init__(self, *_, **__):  # pylint: disable=unused-argument
+            pass
+        def imu_read(self, **_):  # pylint: disable=unused-argument
+            # Option 1: SPI owns/returns the buffer
+            return sample
+        def close(self):
+            pass
+
+    # Patch the symbols used by imu_driver BEFORE constructing IMU_Driver
     from hardware import imu_driver as imu_mod
     monkeypatch.setattr(imu_mod, "IMUDev", FakeLSM6DS3TRDriver, raising=False)
     monkeypatch.setattr(imu_mod, "SPIBus", NoopSPIBus, raising=False)
 
-    # Define params BEFORE using them
+    # Reasonable params
     iir_params = {"SAMPLE_RATE_HZ": 100.0, "CUTOFF_FREQ_HZ": 10.0}
     controller_params = {
         "THETA_RANGE_RAD": math.pi,
         "GYRO_FULL_SCALE_RADS_S": 250.0 * math.pi / 180.0,
     }
 
-    # Instantiate via the module (don’t use a bare IMU_Driver symbol)
     imu = imu_mod.IMU_Driver(iir_params, controller_params)
-
     theta_norm, omega_norm = imu.read_normalized()
+
     assert isinstance(theta_norm, float)
     assert isinstance(omega_norm, float)
     assert -1.0 <= theta_norm <= 1.0

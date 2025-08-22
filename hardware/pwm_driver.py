@@ -1,11 +1,20 @@
-try:
-    import pigpio
-except ImportError:
-    pigpio = None  # Will be replaced by mock in tests/mocks
+# hardware/pwm_driver.py
 
 import logging
 
 motor_log = logging.getLogger("motor")
+
+# Try real pigpio, else fall back to our test mock as a module
+try:
+    import pigpio as _pigpio
+except Exception:
+    try:
+        # module-style mock that provides pi() and constants (e.g., OUTPUT)
+        from test.mocks import mock_pigpio as _pigpio  # noqa: F401
+    except Exception as e:
+        _pigpio = None
+        motor_log.error("Neither pigpio nor mock_pigpio available: %s", e)
+
 
 
 class DualPWMController:
@@ -29,35 +38,39 @@ class DualPWMController:
         gpio_pwm1 (int): GPIO pin for PWM1 (default: 19).
     """
 
-    def __init__(self, frequency=50):
+    def __init__(self, frequency: int = 50):
         """
         Initialize the PWM controller with given frequency (Hz).
         Both PWM channels start at 0% duty.
         Args:
             frequency (int): PWM signal frequency in Hz (default: 50).
         """
+        if _pigpio is None:
+            raise ImportError("pigpio not available and test.mocks.mock_pigpio not found")
+
         self.freq = frequency
         self.duty_cycle_0 = 0
         self.duty_cycle_1 = 0
-        self.freq = frequency
         self.gpio_pwm0 = 18
         self.gpio_pwm1 = 19
 
-        if pigpio is None:
-            from test.mocks.mock_pigpio import MockPigpio
+        self.pi = _pigpio.pi()
 
-            self.pi = MockPigpio.pi()
-        else:
-            self.pi = pigpio.pi()
-            if not self.pi.connected():
-                raise RuntimeError("Could not connect to pigpio daemon")
-            self.pi.set_mode(self.gpio_pwm0, pigpio.OUTPUT)
-            self.pi.set_mode(self.gpio_pwm1, pigpio.OUTPUT)
+        # Real pigpio: `connected` is a bool attribute (not a function)
+        if hasattr(self.pi, "connected") and not self.pi.connected:
+            raise RuntimeError("Could not connect to pigpio daemon")
 
+        # Some mocks may not implement set_mode; guard it
+        if hasattr(self.pi, "set_mode") and hasattr(_pigpio, "OUTPUT"):
+            self.pi.set_mode(self.gpio_pwm0, _pigpio.OUTPUT)
+            self.pi.set_mode(self.gpio_pwm1, _pigpio.OUTPUT)
+
+        # Initialize both channels at 0% duty
+        if hasattr(self.pi, "hardware_PWM"):
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
-        print("Leaving DualPWMController.__init__")
-        motor_log.info("PWM_0 PIN %d,  PWM_1 PIN %d", self.gpio_pwm0, self.gpio_pwm1)
+
+        motor_log.info("PWM_0 PIN %d, PWM_1 PIN %d @ %d Hz", self.gpio_pwm0, self.gpio_pwm1, self.freq)
 
     def set_speed(self, value: float):
         """

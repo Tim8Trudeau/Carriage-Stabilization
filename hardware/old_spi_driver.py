@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import struct
 import time
 
 spi_log = logging.getLogger("spi")
@@ -101,11 +102,19 @@ class SPIBus:
         # LSM6DS3TR-C block layout for 0x22..0x2D (little endian shorts):
         # [GX_L, GX_H, GY_L, GY_H, GZ_L, GZ_H, AX_L, AX_H, AY_L, AY_H, AZ_L, AZ_H]
         # We only keep: GZ (omega), AX (x), AY (y)
-        # [AX_L, AX_H, AY_L, AY_H, GZ_L, GZ_H]
+        gz_l, gz_h = block[4], block[5]
+        ax_l, ax_h = block[6], block[7]
+        ay_l, ay_h = block[8], block[9]
+
+        # 3) return in the order imu_driver expects: (raw_x, raw_y, raw_omega) as int16 LE
+        # i.e., [AX_L, AX_H, AY_L, AY_H, GZ_L, GZ_H]
         out = bytearray(6)
-        out[0], out[1] = block[6], block[7]   # AX
-        out[2], out[3] = block[8], block[9]   # AY
-        out[4], out[5] = block[4], block[5]   # GZ
+        out[0] = ax_l
+        out[1] = ax_h
+        out[2] = ay_l
+        out[3] = ay_h
+        out[4] = gz_l
+        out[5] = gz_h
         return out
 
     def close(self) -> None:
