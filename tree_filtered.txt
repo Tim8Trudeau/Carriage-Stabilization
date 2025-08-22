@@ -4,6 +4,7 @@
 +-- [DOCS]
 |   +-- carriage circle chart.png
 |   +-- IMU dependency graph.txt
+|   +-- imu registers.txt
 |   +-- Lebre Cat TV Requirements.odt
 |   +-- lsm6ds3 IMU app note.pdf
 |   +-- lsm6ds3-datasheet.pdf
@@ -18,8 +19,8 @@
 |   +-- __init__.py
 |   +-- imu_driver.py
 |   +-- LSM6DS3TR_driver.py
+|   +-- old_spi_driver.py
 |   +-- pwm_driver.py
-|   +-- spi_bus.py
 |   \-- spi_driver.py
 +-- [logs]
 |   +-- controller.log
@@ -54,7 +55,8 @@
 |   +-- [unit]
 |   |   +-- __init__.py
 |   |   +-- test_imu_driver_unit.py
-|   |   \-- test_pwm_driver_unit.py
+|   |   +-- test_pwm_driver_unit.py
+|   |   \-- test_spi_driver_unit.py
 |   +-- __init__.py
 |   +-- conftest.py
 |   +-- orig_test_controller.py
