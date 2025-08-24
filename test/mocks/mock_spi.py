@@ -14,17 +14,19 @@ class MockSPIBus:
     """
 
     def __init__(self, spi_channel=0, baud=1_000_000, io_mode=0,
-                 omega_mode="constant", omega_raw_base=5000, noise_span=2000, theta_step=5):
+                 omega_mode="none", omega_slope=0.8, omega_raw_base=5000, noise_span=2000, theta_step=5):
         self.spi_channel = spi_channel
         self.baud = baud
         self.io_mode = io_mode
+        self.omega_slope = omega_slope
         self.omega_mode = (omega_mode or "constant").lower()
         self.omega_raw_base = int(omega_raw_base)
         self.noise_span = int(noise_span)
         self.step = 0
+        self.omega_raw = 0
         self.direction = theta_step
-        imu_log.info("Mock SPI bus initialized (mode=%s, ch=%d, baud=%d, spi_mode=%d)",
-                     self.omega_mode, self.spi_channel, self.baud, self.io_mode)
+        imu_log.info("Mock SPI bus initialized (mode=%s, slope=%s, ch=%d, baud=%d, spi_mode=%d)",
+                     self.omega_mode, self.omega_slope, self.spi_channel, self.baud, self.io_mode)
 
     # --- sample synthesis (shared) ---
     def _synthesize(self):
@@ -33,17 +35,21 @@ class MockSPIBus:
         y_raw = int(16_384 * math.cos(math.radians(self.step)))
 
         if self.omega_mode in ("none", "off", "0"):
-            omega_raw = 0
+            self.omega_raw = 0
         elif self.omega_mode == "constant":
-            omega_raw = self.omega_raw_base
+            self.omega_raw = self.omega_raw_base
         elif self.omega_mode == "noisy":
-            omega_raw = self.omega_raw_base + random.randint(-self.noise_span, self.noise_span)
+            self.omega_raw = self.omega_raw_base + random.randint(-self.noise_span, self.noise_span)
         elif self.omega_mode == "random":
-            omega_raw = random.randint(-self.noise_span, self.noise_span)
+            self.omega_raw = random.randint(-self.noise_span, self.noise_span)
+        elif self.omega_mode == "slope":
+            slope = int(self.omega_slope * 131.0)  # deg/s to raw counts,
+            slope = slope if self.omega_raw > -16384 else -slope
+            self.omega_raw += slope
         else:
-            omega_raw = 0
+            self.omega_raw = 0
 
-        omega_raw = max(-32768, min(32767, omega_raw))
+        omega_raw = max(-16_384  , min(16_384, self.omega_raw))
 
         # step motion
         self.step += self.direction

@@ -43,10 +43,10 @@ class Defuzzifier:
         for w, z in rule_outputs:
             numerator += w * z
             denominator += w
-            print(f"w=  {w:.2f}, z=  {z:.2f}, w*z=  {w * z:.2f}")
+            #print(f"w=  {w:.2f}, z=  {z:.2f}, w*z=  {w * z:.2f}")
         final_output = numerator / denominator
 
-        print(f"numerator=  {numerator:.2f}, denominator=  {denominator:.2f}")
+        # print(f"numerator=  {numerator:.2f}, denominator=  {denominator:.2f}")
         if denominator == 0:
             defuzzifier_log.warning("Sum of firing strengths is zero. Outputting 0.")
             return 0.0

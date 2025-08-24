@@ -8,9 +8,7 @@
             //"module": "plot_omega_motor_cmd",
             "program": "${workspaceFolder}/utils/plot_omega_motor_cmd.py",
             "console": "integratedTerminal",
-            "args": [
-                "--save"
-            ],
+            "args": [],
             "justMyCode": false,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
@@ -23,9 +21,7 @@
             //"module": "plot_theta_motor_cmd",
             "program": "${workspaceFolder}/utils/plot_theta_motor_cmd.py",
             "console": "integratedTerminal",
-            "args": [
-                "--save"
-            ],
+            "args": [],
             "justMyCode": false,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
@@ -38,9 +34,7 @@
             //"module": "plot_time_series_cmd",
             "program": "${workspaceFolder}/utils/plot_time_series_cmd.py",
             "console": "integratedTerminal",
-            "args": [
-                "--save"
-            ],
+            "args": [],
             "justMyCode": false,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
@@ -53,9 +47,7 @@
             //"module": "plot_membership_shapes",
             "program": "${workspaceFolder}/utils/plot_membership_shapes.py",
             "console": "integratedTerminal",
-            "args": [
-                "--save"
-            ],
+            "args": [],
             "justMyCode": false,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"

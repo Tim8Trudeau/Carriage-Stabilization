@@ -147,7 +147,9 @@ def collect_mock_samples(cfg: Dict, samples: int, override_omega_mode: str | Non
     buf = bytearray(6)
     for _ in range(int(samples)):
         # Read raw bytes from mock
-        mock.readfrom_into(0x00, buf)
+        # NOTE: In real code, you would use mock.readfrom_into(0x00, buf)
+#        mock.readfrom_into(0x00, buf)
+        buf = mock.imu_read()
         raw_y = int.from_bytes(buf[0:2], "little", signed=True)
         raw_x = int.from_bytes(buf[2:4], "little", signed=True)
         raw_omega = int.from_bytes(buf[4:6], "little", signed=True)
@@ -173,19 +175,21 @@ def main():
         description="Plot omega membership functions with motor_cmd overlay (MockSPIBus-driven)"
     )
     parser.add_argument("--samples", type=int, default=600,
-                        help="number of mock samples (default: 600)")
+                        help="number of sim samples (default: 600)")
     parser.add_argument("--save", action="store_true",
                         help="save figure to plots/omega_motor_cmd.png")
 
     # Put ALL mode options in one mutually-exclusive group (prevents conflicts)
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--omega-mode", choices=["constant", "noisy", "random", "none"],
+    mode.add_argument("--omega-mode", choices=["constant", "noisy", "random", "slope", "none"],
                     help="override MOCK_SPI OMEGA_MODE for this run")
     mode.add_argument("--random",   action="store_true",
                     help="shorthand for --omega-mode random")
     mode.add_argument("--noisy",    action="store_true",
                     help="shorthand for --omega-mode noisy")
     mode.add_argument("--constant", action="store_true",
+                    help="shorthand for --omega-mode constant")
+    mode.add_argument("--slope", action="store_true",
                     help="shorthand for --omega-mode constant")
     mode.add_argument("--none",     action="store_true",
                     help="shorthand for --omega-mode none")
@@ -197,6 +201,7 @@ def main():
     if args.random:   override = "random"
     elif args.noisy:  override = "noisy"
     elif args.constant: override = "constant"
+    elif args.slope: override = "slope"
     elif args.none:   override = "none"
 
 

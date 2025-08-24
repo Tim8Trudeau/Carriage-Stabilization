@@ -100,7 +100,7 @@ class RuleEngine:
         # An active rule is one that has a non-zero firing strength.
         active_rules_output = []
         for i, rule in enumerate(self.rules):
-            antecedent = rule["rule"]
+            antecedent = rule["rule"] # Rule antecedent: [theta_set, omega_set]
             theta_set = antecedent[0]
             omega_set = antecedent[1]
 
@@ -120,10 +120,10 @@ class RuleEngine:
                 # theta_coeff and omega_coeff must negitive to ensure that the output has opposite sign to the input
                 # so that the resulting output acts to reduce positional error and restore the system toward the setpoint.
                 # The bias term is a constant offset that can adjust the output independently of the inputs.
-
+                # ADDED THETA_SCALE_FACTOR and OMEGA_SCALE_FACTOR.
                 consequent = rule["output"]
-                z1 = consequent["theta_coeff"] * degree_theta * crisp_theta
-                z2 = consequent["omega_coeff"] * degree_omega * crisp_omega
+                z1 = consequent["theta_coeff"] * 5 * degree_theta * crisp_theta
+                z2 = consequent["omega_coeff"] * 3 * degree_omega * crisp_omega
                 z3 = consequent["bias"]
                 z = z1 + z2 + z3
 

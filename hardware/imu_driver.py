@@ -69,6 +69,7 @@ class IMU_Driver:
         self.sample_rate_hz = float(self.iir_params.get("SAMPLE_RATE_HZ", 50.0))
         self.cutoff_freq_hz = float(self.iir_params.get("CUTOFF_FREQ_HZ", 5.0))
 
+        # Compute alpha for the Omega IIR filter
         dt = 1.0 / self.sample_rate_hz
         rc = 1.0 / (2.0 * math.pi * self.cutoff_freq_hz)
         self.alpha = dt / (rc + dt)
