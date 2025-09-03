@@ -39,11 +39,12 @@ class FLCController:
             config (Dict[str, Any]): The full configuration dictionary, which
                 contains parameters for all sub-modules.
         """
+        controller_params = config.get("controller_params", {})
         mf_params = config.get("membership_functions", {})
         rule_base = config.get("rule_base", [])
 
         self.fuzzifier = Fuzzifier(mf_params)
-        self.rule_engine = RuleEngine(rule_base)
+        self.rule_engine = RuleEngine(rule_base, controller_params)
         self.defuzzifier = Defuzzifier()
         controller_log.info("FLC Controller initialized and ready.")
 

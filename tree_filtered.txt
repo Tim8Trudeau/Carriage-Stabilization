@@ -1,6 +1,7 @@
 ﻿[Carriage Stabilization]
 +-- [config]
-|   \-- flc_config.toml
+|   +-- flc_config.toml
+|   \-- sim_config.toml
 +-- [DOCS]
 |   +-- carriage circle chart.png
 |   +-- IMU dependency graph.txt
@@ -8,7 +9,9 @@
 |   +-- Lebre Cat TV Requirements.odt
 |   +-- lsm6ds3 IMU app note.pdf
 |   +-- lsm6ds3-datasheet.pdf
-|   \-- Runtime sequence for IMU_Driver.txt
+|   +-- Runtime sequence for IMU_Driver.txt
+|   +-- simulation_req.odt
+|   \-- simulation_req.pdf
 +-- [flc]
 |   +-- __init__.py
 |   +-- controller.py
@@ -19,24 +22,17 @@
 |   +-- __init__.py
 |   +-- imu_driver.py
 |   +-- LSM6DS3TR_driver.py
-|   +-- old_spi_driver.py
 |   +-- pwm_driver.py
 |   \-- spi_driver.py
 +-- [logs]
-|   +-- controller.log
-|   +-- defuzzifier.log
-|   +-- fuzzifier.log
-|   +-- imu.log
-|   +-- main.log
-|   +-- motor.log
-|   +-- profiler.log
-|   +-- rule_engine.log
-|   +-- spi.log
-|   \-- WZ_engine.log
+|   +-- WZ_engine.log.1
+|   +-- WZ_engine.log.2
+|   \-- WZ_engine.log.3
 +-- [plots]
 |   +-- omega_membership_functions.png
 |   +-- omega_motor_cmd.png
-|   \-- theta_membership_functions.png
+|   +-- theta_membership_functions.png
+|   \-- theta_omega_motor_cmd_timeseries.png
 +-- [scripts]
 |   +-- clean_logs.py
 |   +-- FindPrivateMACs.ps1
@@ -51,7 +47,8 @@
 |   |   +-- __init__.py
 |   |   +-- mock_LSM6DS3TR_driver.py
 |   |   +-- mock_pigpio.py
-|   |   \-- mock_spi.py
+|   |   +-- mock_spi.py
+|   |   \-- simulation.py
 |   +-- [unit]
 |   |   +-- __init__.py
 |   |   +-- test_imu_driver_unit.py
@@ -63,6 +60,8 @@
 |   +-- test_controller.py
 |   +-- test_defuzzifier.py
 |   +-- test_fuzzifer.py
+|   +-- test_imu_driver_api_contract.py
+|   +-- test_imu_driver_filters.py
 |   +-- test_motor_driver.py
 |   \-- test_rule_engine.py
 +-- [utils]
@@ -71,6 +70,7 @@
 |   +-- logger.py
 |   +-- plot_membership_shapes.py
 |   +-- plot_omega_motor_cmd.py
+|   +-- plot_simulation.py
 |   +-- plot_theta_motor_cmd.py
 |   +-- plot_time_series_cmd.py
 |   +-- profiler.py

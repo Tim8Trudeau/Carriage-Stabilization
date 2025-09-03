@@ -4,6 +4,7 @@ import logging
 import argparse
 import math
 from tkinter import N
+import importlib
 import tomllib
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ from hardware import imu_driver as imu_mod
 
 # Mock SPI (we’ll inject this into imu_driver.SPIBus)
 from test.mocks.mock_spi import MockSPIBus
-
+# ...
 
 def run_time_series(config_path: str,
                     n_samples: int,
@@ -44,17 +45,37 @@ def run_time_series(config_path: str,
 
     # ---- Inject Mock SPI into imu_driver so IMU_Driver uses it ----
     # Allow TOML defaults for the mock, but let CLI override
+# ---- Mock SPI settings: TOML with CLI override ----
     mock_cfg = dict(controller_params.get("MOCK_SPI", {}))
+
     omega_mode = (omega_mode or mock_cfg.get("OMEGA_MODE") or "none").lower()
-    omega_slope = float(omega_slope if omega_slope is not None else mock_cfg.get("OMEGA_SLOPE", 0.0))
 
-    theta_step_deg = float(theta_step_deg if theta_step_deg is not None else mock_cfg.get("THETA_STEP_DEG", 1.0))
+    # Priority: CLI > TOML > default(0)
+    omega_slope = float(
+        omega_slope if omega_slope is not None else mock_cfg.get("OMEGA_SLOPE", 0.0)
+    )
+    theta_step_deg = float(
+        theta_step_deg if theta_step_deg is not None else mock_cfg.get("THETA_STEP_DEG", 1.0)
+    )
+    omega_raw_base = int(mock_cfg.get("OMEGA_RAW_BASE", 0))
+    noise_span = int(mock_cfg.get("NOISE_SPAN", 2000))
 
-    class _InjectedSPIBus(MockSPIBus):
-        """Factory matching imu_driver.SPIBus(controller_params) signature."""
-        def __init__(self, _controller_params):
-            # You can honor more mock knobs here if you add them to TOML
-            super().__init__(omega_mode=omega_mode, omega_slope=omega_slope, theta_step=theta_step_deg)
+
+def _make_spi(controller_params):
+    # Pull TOML defaults (MOCK_SPI.*) when CLI args are None
+    m = dict(controller_params.get("MOCK_SPI", {}))
+    return MockSPIBus(
+        omega_mode=(omega_mode or m.get("OMEGA_MODE") or "none").lower(),
+        omega_slope=float(omega_slope if omega_slope is not None else m.get("OMEGA_SLOPE", 0.0)),
+        theta_step=float(theta_step_deg if theta_step_deg is not None else m.get("THETA_STEP", 1.0)),
+        omega_raw_base=int(m.get("OMEGA_RAW_BASE", 0)),
+        noise_span=int(m.get("NOISE_SPAN", 2000)),
+        controller_params=controller_params,  # pass through for the simulator
+    )
+
+# Install the factory so IMU_Driver uses it
+imu_mod.SPIBus = _make_spi
+
 
     # Monkey-patch the symbol imu_driver uses to create its SPI
     imu_mod.SPIBus = _InjectedSPIBus  # type: ignore[attr-defined]
@@ -79,6 +100,7 @@ def run_time_series(config_path: str,
             omega_rps = omega_norm * gyro_fs_rps
 
             motor_cmd = flc.calculate_motor_cmd(theta_norm, omega_norm)
+            set_motor_cmd(motor_cmd)   # <-- hand motor_cmd to the simulator
 
             theta_deg_series.append(math.degrees(theta_rad))
             omega_deg_s_series.append(math.degrees(omega_rps))
@@ -146,21 +168,30 @@ if __name__ == "__main__":
         _cfg = tomllib.load(f)
     default_hz = float(_cfg["controller_params"].get("TARGET_HZ", 50.0))
     default_samples = int(default_hz * 2)  # ~2 seconds
-    default_theta_step = float(_cfg["controller_params"].get("TARGET_HZ", 50.0))
+
+    # From TOML unless overridden
     default_theta_step = float(_cfg["controller_params"].get("MOCK_SPI", {}).get("THETA_STEP", 1.0))
-    default_samples = float(_cfg["controller_params"].get("MOCK_SPI", {}).get("SAMPLES", default_samples))
 
     parser = argparse.ArgumentParser(description="Plot Theta/Omega/Motor Cmd via real runtime pipeline")
     parser.add_argument("--samples", type=int, default=default_samples, help="number of samples")
-    parser.add_argument("--theta-step", type=float, default=default_theta_step, help="theta increment per sample (deg/sample)")
-    parser.add_argument("--omega-mode", choices=["constant", "noisy", "random", "slope", "none"], default=None,
-                        help="override MOCK_SPI.OMEGA_MODE")
-    parser.add_argument("--omega-slope", type=float, default=None,
-                        help="Set omega slope (deg/s per sample) for 'slope' mode")
+    parser.add_argument("--theta-step", type=float, default=default_theta_step,
+                        help="theta increment per sample (deg/sample)")
+    parser.add_argument(
+        "--omega-mode",
+        choices=["constant", "noisy", "random", "none"],
+        default=None,
+        help="override MOCK_SPI.OMEGA_MODE"
+    )
+    parser.add_argument(
+        "--omega-slope",
+        type=float,
+        default=None,
+        help="omega slope (raw counts per degree). Priority: CLI > TOML > default(0)."
+    )
     parser.add_argument("--interval", type=int, default=10, help="sample interval in ms")
     parser.add_argument("--save", action="store_true", help="save PNG to plots/ instead of showing")
     args = parser.parse_args()
-    n_samples=int(args.samples)
+    n_samples = int(args.samples)
 
     run_time_series(
         config_path=config_path,

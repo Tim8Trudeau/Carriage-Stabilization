@@ -1,0 +1,21 @@
+[simulation.timing]
+SAMPLE_RATE_HZ = 50.0           # dt = 1 / SAMPLE_RATE_HZ
+DURATION_S     = 10.0           # total simulated seconds
+
+[simulation.initial_conditions]
+THETA_INITIAL_RAD = 0.0         # initial angle (rad)
+OMEGA_INITIAL_RAD_S = 0.0       # initial angular rate (rad/s)
+
+[simulation.mechanics]
+WHEEL_RADIUS_M   = 0.604        # 604 mm -> meters
+CARRIAGE_MASS_KG = 0.80         # or from prior estimate; adjust as needed
+MOTOR_FORCE_N    = 8.71         # max tangential force at rim for motor_cmd=±1
+GRAVITY_M_S2     = 9.80665      # g
+
+[simulation.imu_model]
+GYRO_FS_RAD_S = 4.363           # gyro full-scale in rad/s (maps to ±16384 raw)
+ACCEL_RAW_FS  = 16384           # raw full-scale counts for accel mapping
+NOISE_SPAN    = 3               # randint(-NOISE_SPAN, +NOISE_SPAN) added to x_raw, y_raw
+
+[logging]
+LEVEL = "INFO"

@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+{"name":"Python Debugger: Current File","type":"debugpy","request":"launch","program":"${file}","console":"integratedTerminal"},
         {
             "name": "plot_omega_motor",
             "type": "debugpy",
@@ -28,11 +29,11 @@
             }
         },
         {
-            "name": "plot_time_series",
+            "name": "plot_simulation",
             "type": "debugpy",
             "request": "launch",
-            //"module": "plot_time_series_cmd",
-            "program": "${workspaceFolder}/utils/plot_time_series_cmd.py",
+            //"module": "plot_simulation",
+            "program": "${workspaceFolder}/utils/plot_simulation.py",
             "console": "integratedTerminal",
             "args": [],
             "justMyCode": false,

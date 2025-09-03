@@ -1,34 +1,7 @@
-# --- System Constants ---
-[system_constants]
-WHEEL_RADI = 604.0
-MOTOR_DRIVE_RADI = 22.5
-MAX_MOTOR_RPM = 500.0
-WHEEL_TO_MOTOR_RATIO = 26.8     # WHEEL_RADI / MOTOR_DRIVE_RADI
-MAX_WHEEL_RPM = 18.66           # MAX_MOTOR_RPM / WHEEL_TO_MOTOR_RATIO
-
-# --- Controller Parameters ---
-[controller_params]
-TARGET_HZ = 50.0
-THETA_RANGE_RAD = 3.1416
-GYRO_FULL_SCALE_RADS_S = 4.363
-ACCEL_FULL_SCALE_G = 2.0
-IMU_STAT_REG = 30
-IMU_DATA_REG = 34
+# --- FLC Scaling factors ---
+[flc_scaling]
 THETA_SCALE_FACTOR = 5
-OMEGA_SCALE_FACTOR = 3
-
-[controller_params.MOCK_SPI]
-OMEGA_MODE = "noisy"        # constant, noisy, random, slope or none
-OMEGA_RAW_BASE = 0       # not used in random mode
-OMEGA_SLOPE = 0.0           # Omega rate of change during slope
-NOISE_SPAN = 20000          # ±noise in raw counts
-THETA_STEP = 5              # Keeps theta constant when testing omega
-SAMPLES = 200               # Sample size of the simulation
-
-# --- IIR Filter ---
-[iir_filter]
-SAMPLE_RATE_HZ = 50.0
-CUTOFF_FREQ_HZ = 5.0
+OMEGA_SCALE_FACTOR = 5
 
 # --- Membership Functions ---
 [membership_functions.theta]
@@ -47,13 +20,8 @@ NV    = [-0.5,  0.0,  0.5]
 SVCW  = [ 0.0,  0.5,  1.0]
 LVCW  = [ 0.5,  1.0,  1.5,  1.5]
 
-# For "LECCW", "MECCW", "SECCW" (theta negative): theta_coeff is negative
-# For "SECW", "MECW", "LECW" (theta positive): theta_coeff is positive
-# The "NE" (near zero) rules are kept as in your original config
-# (mostly zero, or slightly negative/positive per your tuning)
-
 # --- Rule Base ---
-
+# 1
 [[rule_base]]
 rule = ["LECCW", "LVCCW"]
 output = { theta_coeff = -1.0, omega_coeff = 1.0, bias = 0 }

@@ -20,7 +20,8 @@ def test_triangle_membership_function(basic_fuzzifier):
     params = [-0.5, 0.0, 0.5] # ZERO set
     assert basic_fuzzifier._triangle(0.0, params) == pytest.approx(1.0)
     assert basic_fuzzifier._triangle(-0.25, params) == pytest.approx(0.5)
-    assert basic_fuzzifier._triangle(0.25, params) == pytest.approx(0.5)
+    results = basic_fuzzifier._triangle(-0.25, params)
+    assert results == pytest.approx(0.5)
     assert basic_fuzzifier._triangle(-0.5, params) == pytest.approx(0.0)
     assert basic_fuzzifier._triangle(0.5, params) == pytest.approx(0.0)
     assert basic_fuzzifier._triangle(-1.0, params) == pytest.approx(0.0)
