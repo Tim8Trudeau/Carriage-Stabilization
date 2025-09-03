@@ -25,9 +25,6 @@
 |   +-- pwm_driver.py
 |   \-- spi_driver.py
 +-- [logs]
-|   +-- WZ_engine.log.1
-|   +-- WZ_engine.log.2
-|   \-- WZ_engine.log.3
 +-- [plots]
 |   +-- omega_membership_functions.png
 |   +-- omega_motor_cmd.png
