@@ -122,11 +122,13 @@ class IMU_Driver:
         accel_norm_g = math.sqrt(float(raw_x) ** 2 + float(raw_y) ** 2) / max(1.0, float(self.accel_raw_fs))
         saturated = (abs(raw_x) > self.accel_raw_fs) or (abs(raw_y) > self.accel_raw_fs)
 
-        if callable (get_sim_theta):
+        # Optional sim compare (only in mock path that exposes get_sim_theta)
+        get_sim_theta = getattr(self.spi, "get_sim_theta", None)
+        if callable(get_sim_theta):
             theta_sim = float(get_sim_theta())
             imu_log.debug(
                 "θ_compare | θ_imu=%.3f rad | θ_sim=%.3f rad | dθ=%.3f",
-                theta_rads, theta_sim, (theta_rads - theta_sim)
+                theta_rads, theta_sim, (theta_rads - theta_sim),
             )
 
         imu_log.debug(

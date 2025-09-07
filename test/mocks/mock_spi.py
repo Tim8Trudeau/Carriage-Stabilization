@@ -19,7 +19,7 @@ class MockSPIBus:
     Internally steps the physics simulator and emits raw-like bytes:
         [xL,xH, yL,yH, omegaL,omegaH]
     """
-    def __init__(self, controller_params: dict | None = None, sim_config_path: str = "sim_config.toml"):
+    def __init__(self, controller_params: dict | None = None, sim_config_path: str = "config/sim_config.toml"):
         self.controller_params = dict(controller_params) if controller_params else {}
 
         # Load simulation config (simulation-only parameters)
