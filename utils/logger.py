@@ -1,68 +1,68 @@
-"""
-Configures the application-wide logging system.
+# logger.py (patched)
+import os, glob, logging
+from contextvars import ContextVar
 
-This module sets up multiple loggers for different parts of the application
-(e.g., fuzzifier, rule_engine, defuzzifier) to write to separate, structured
-log files. This aids in debugging and later analysis.
-"""
+_LOOP_I = ContextVar("loop_i", default=-1)
 
-import os
-import logging
-import logging.handlers
+def set_loop_index(i: int) -> None:
+    _LOOP_I.set(int(i))
 
+class LoopIndexFilter(logging.Filter):
+    def filter(self, record):
+        # ensure every record has .i
+        record.i = _LOOP_I.get()
+        return True
 
-def setup_logging(log_level=logging.DEBUG):
-    """
-    Configures loggers for all FLC components.
+def setup_logging(
+    log_dir: str = "logs",
+    overwrite: bool = True,
+    log_level: int = logging.DEBUG,
+    console_level: int = logging.INFO,
+    cleanup_rotated: bool = True,
+) -> None:
+    os.makedirs(log_dir, exist_ok=True)
+    if cleanup_rotated:
+        for path in glob.glob(os.path.join(log_dir, "*.log.*")):
+            try: os.remove(path)
+            except OSError: pass
 
-    Creates a main application logger and specific loggers for FLC modules.
-    Each logger writes to its own file in the 'logs' directory.
+    fmt = logging.Formatter("%(i)06d | %(levelname)s | %(name)s | %(message)s")
 
-    Args:
-        log_level (int): The logging level to set for all handlers (e.g.,
-            logging.INFO, logging.DEBUG).
-    """
-    os.makedirs("logs", exist_ok=True)
+    # console for "main"
+    console = logging.StreamHandler()
+    console.setFormatter(fmt)
+    console.setLevel(console_level)
+    console.addFilter(LoopIndexFilter())   # <<< ADD THIS
 
-    formatter = logging.Formatter(
-        "%(asctime)s.%(msecs)03d | %(message)s",
-        datefmt="%m-%d %H:%M:%S.%f"[:-3],  # Exclude year from date format,
-    )
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.INFO)
-
-    # Define logger names used throughout the project
-    loggers = [
+    logger_names = [
         "main",
         "controller",
-        "fuzzifier",
         "rule_engine",
         "WZ_engine",
+        "fuzzifier",
         "defuzzifier",
-        "spi",
+        "simulation",
+        "simloop",
         "imu",
+        "spi",
         "motor",
         "profiler",
     ]
 
-    for name in loggers:
-        logger = logging.getLogger(name)
-        logger.setLevel(log_level)
+    for name in logger_names:
+        log = logging.getLogger(name)
+        log.setLevel(log_level)
+        log.propagate = False
+        for h in list(log.handlers):
+            log.removeHandler(h)
 
-        # Clear handlers to prevent duplication during repeated setup
-        if logger.hasHandlers():
-            logger.handlers.clear()
+        mode = "w" if overwrite else "a"
+        fh = logging.FileHandler(os.path.join(log_dir, f"{name}.log"), mode=mode, encoding="utf-8")
+        fh.setFormatter(fmt)
+        fh.setLevel(log_level)
+        fh.addFilter(LoopIndexFilter())    # <<< AND THIS
+        log.addHandler(fh)
 
-        file_handler = logging.handlers.RotatingFileHandler(
-            f"logs/{name}.log", maxBytes=1024 * 1024, backupCount=3, encoding="utf-8"
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-        # Send main logger output to console too
-        if name == "main":
-            logger.addHandler(console_handler)
-
+    # attach console to "main" after filters exist
+    logging.getLogger("main").addHandler(console)
     logging.getLogger("main").info("Logging system initialized.")

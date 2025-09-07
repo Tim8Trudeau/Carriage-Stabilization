@@ -122,8 +122,15 @@ class IMU_Driver:
         accel_norm_g = math.sqrt(float(raw_x) ** 2 + float(raw_y) ** 2) / max(1.0, float(self.accel_raw_fs))
         saturated = (abs(raw_x) > self.accel_raw_fs) or (abs(raw_y) > self.accel_raw_fs)
 
+        if callable (get_sim_theta):
+            theta_sim = float(get_sim_theta())
+            imu_log.debug(
+                "θ_compare | θ_imu=%.3f rad | θ_sim=%.3f rad | dθ=%.3f",
+                theta_rads, theta_sim, (theta_rads - theta_sim)
+            )
+
         imu_log.debug(
-            "raw_x=%6d raw_y=%6d raw_ω=%6d | ax_sc=%6d ay_sc=%6d | "
+            "raw_x=%.3f raw_y=%.3f raw_ω=%.3f | ax_sc=%.3f ay_sc=%.3f | "
             "ax_lp=%8.2f ay_lp=%8.2f | θ=%.3f rad (norm=%.4f) | "
             "ω_raw_filt=%8.2f ω_norm=%.4f ω_rps=%.4f | |a|/1g=%.3f sat=%s",
             raw_x, raw_y, raw_omega,

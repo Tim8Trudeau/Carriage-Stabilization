@@ -45,6 +45,7 @@ class MockSPIBus:
             noise_span=int(imu.get("NOISE_SPAN", 0)),
         )
 
+        self.last_theta = 0.0
         self.sim = CarriageSimulator(self.params)
         imu_log.info(
             "MockSPI: dt=%.4f s, steps=%d, mass=%.3f kg, force=%.3f N, g=%.4f m/s^2",
@@ -55,8 +56,13 @@ class MockSPIBus:
     def _synthesize(self) -> tuple[int,int,int]:
         # feed latest motor command, then advance
         self.sim.set_motor_cmd(_MOTOR_CMD)
-        x_raw, y_raw, omega_raw, _, _ = self.sim.step()
+        x_raw, y_raw, omega_raw, theta, _ = self.sim.step()  # θ, ω already returned by step
+        self.last_theta = float(theta)  # NEW: remember θ for logging/compare
         return x_raw, y_raw, omega_raw
+
+    # NEW: allow other components to read sim θ
+    def get_sim_theta(self) -> float:
+        return float(self.last_theta) # match imu sign convention CW+
 
     def imu_read(self, **_) -> bytes:
         x_raw, y_raw, omega_raw = self._synthesize()

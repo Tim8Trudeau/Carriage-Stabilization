@@ -22,17 +22,19 @@ class RuleEngine:
             'IF' part (antecedent) and a 'THEN' part (consequent).
     """
 
-    def __init__(self, rule_base: List[Dict], controller_params: Dict):
+    def __init__(self, rule_base: List[Dict], rule_scaling: Dict):
         """
         Initializes the RuleEngine with a specific rule base.
 
         Args:
             rule_base (List[Dict]): A list of rules loaded from the config.
-            controller_params (Dict): Parameters from config (flc_config.toml).
+            rule_scaling (Dict): Parameters from config (flc_config.toml).
         """
         self.rules = rule_base
-        self.theta_scale_factor = controller_params.get("THETA_SCALE_FACTOR", 1.0)
-        self.omega_scale_factor = controller_params.get("OMEGA_SCALE_FACTOR", 1.0)
+        scaling = rule_scaling or {}
+        # Safe numeric defaults
+        self.theta_scale_factor = float(scaling.get("THETA_SCALE_FACTOR", 1.0))
+        self.omega_scale_factor = float(scaling.get("OMEGA_SCALE_FACTOR", 1.0))
 
         rule_engine_log.info("Rule Engine initialized with %d rules.", len(self.rules))
         rule_engine_log.info(
@@ -105,16 +107,13 @@ class RuleEngine:
         # Log the rule firing details
         # Log the input values and their fuzzified membership degrees
         # This helps in debugging and understanding the rule evaluation process.
-        rule_engine_log.info(
-            "Theta: %.2f, fuzzy_Theta=%s",
-            crisp_theta,
-            fuzzified_theta
-        )
-        rule_engine_log.info(
-            "Omega: %.2f, fuzzy_Omega=%s",
-            crisp_omega,
-            fuzzified_omega,
-        )
+        rounded = {k: round(v, 3) for k, v in fuzzified_theta.items()}
+        rule_engine_log.info("Theta: %.3f, fuzzy_Theta=%s", crisp_theta, rounded)
+
+        rounded = {k: round(v, 3) for k, v in fuzzified_omega.items()}
+        rule_engine_log.info("Omega: %.3f, fuzzy_Omega=%s", crisp_omega, rounded)
+
+
         # Initialize a list to hold the outputs of contributing rules.
         # An contributing rule is one that has a non-zero firing strength.
         active_rules_output = []
@@ -153,7 +152,7 @@ class RuleEngine:
                 else:
                     conseq = "omega_coeff"
 
-                WZ_log.debug("\n"
+                WZ_log.debug(
                     "Rule# %d (theta_member %s) (omega_member %s) "
                     "Z=%.2f , Z1_theta=%.2f, Z2_omega=%.2f ",
                     i,
@@ -163,11 +162,12 @@ class RuleEngine:
                 WZ_log.debug(
                     "crisp_theta= %.2f, degree_theta= %.2f, "
                     "degree_omega= %.2f, "
-                    "W= %.2f |%s consequent= %.2f",
+                    "W= %.2f |%s rule_consq= %.2f",
                     crisp_theta, degree_theta,
                     degree_omega,
                     firing_strength, conseq, consequent[conseq],
                 )
             else:
-                WZ_log.debug("! Neither input falls in a member function !")
+                WZ_log.debug("Rule# %d W= %.2f", i, firing_strength)
+
         return active_rules_output

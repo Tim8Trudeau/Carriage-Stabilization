@@ -7,6 +7,7 @@ variables (e.g., 'Small Error ClockWise').
 """
 
 import logging
+from turtle import up
 from typing import Dict, List
 
 fuzzifier_log = logging.getLogger("fuzzifier")
@@ -121,6 +122,7 @@ class Fuzzifier:
 
         # Format and log after collecting all outputs
         formatted_output = {k: f"{v:.3f}" for k, v in fuzzified_inputs.items()}
+        if input_name == "omega": input_name = input_name.upper()
         fuzzifier_log.debug(
             "Fuzzified %s=  %.3f -> %s", input_name, crisp_value, formatted_output
         )
