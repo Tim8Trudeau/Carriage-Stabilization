@@ -9,6 +9,7 @@
 |   +-- Lebre Cat TV Requirements.odt
 |   +-- lsm6ds3 IMU app note.pdf
 |   +-- lsm6ds3-datasheet.pdf
+|   +-- Motor Driver Wiring.JPG
 |   +-- Runtime sequence for IMU_Driver.txt
 |   +-- simulation_req.odt
 |   \-- simulation_req.pdf
@@ -84,6 +85,7 @@
 |   +-- plot_theta_motor_cmd.py
 |   +-- plot_time_series_cmd.py
 |   +-- profiler.py
+|   +-- PWM Motor Controller.py
 |   \-- rule_trace.py
 +-- .gitignore
 +-- Carriage Stabilization.code-workspace
