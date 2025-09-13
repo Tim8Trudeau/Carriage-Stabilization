@@ -6,7 +6,7 @@ SAMPLE_RATE_HZ = 50.0           # dt = 1 / SAMPLE_RATE_HZ
 DURATION_S     = 10.0            # total simulated seconds
 
 [simulation.initial_conditions]
-THETA_INITIAL_RAD =   0.6     # initial angle (rad)
+THETA_INITIAL_RAD =   0.1     # initial angle (rad)
 OMEGA_INITIAL_RAD_S = -1       # initial angular rate (rad/s)
 
 [simulation.mechanics]

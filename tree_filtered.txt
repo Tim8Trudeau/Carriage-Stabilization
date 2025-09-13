@@ -9,6 +9,7 @@
 |   +-- Lebre Cat TV Requirements.odt
 |   +-- lsm6ds3 IMU app note.pdf
 |   +-- lsm6ds3-datasheet.pdf
+|   +-- Motor Driver Wiring.JPG
 |   +-- Runtime sequence for IMU_Driver.txt
 |   +-- simulation_req.odt
 |   \-- simulation_req.pdf
@@ -78,6 +79,7 @@
 |   +-- __init__.py
 |   +-- Capture.JPG
 |   +-- logger.py
+|   +-- motor_control.py
 |   +-- plot_membership_shapes.py
 |   +-- plot_omega_motor_cmd.py
 |   +-- plot_simulation.py

@@ -7,7 +7,7 @@ variables (e.g., 'Small Error ClockWise').
 """
 
 import logging
-from turtle import up
+#from turtle import up
 from typing import Dict, List
 
 fuzzifier_log = logging.getLogger("fuzzifier")
