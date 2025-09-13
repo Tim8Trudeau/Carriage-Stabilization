@@ -79,7 +79,7 @@
 |   +-- __init__.py
 |   +-- Capture.JPG
 |   +-- logger.py
-|   +-- motor_Controller.py
+|   +-- motor_control.py
 |   +-- plot_membership_shapes.py
 |   +-- plot_omega_motor_cmd.py
 |   +-- plot_simulation.py
