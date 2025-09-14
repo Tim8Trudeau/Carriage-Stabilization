@@ -3,10 +3,14 @@
 Manual PWM drive for Raspberry Pi using the project's DualPWMController.
 
 Keys:
-  q -> increase command by +0.1
-  z -> decrease command by -0.1
+  q -> increase command by +step (default +0.1)
+  z -> decrease command by -step (default -0.1)
   0 -> stop (command = 0.0)
   x -> exit
+
+Flags:
+  --step <float>   Per-keypress delta (0 < step <= 1). Default: 0.1
+  --freq <int>     PWM frequency in Hz. Default: 200
 """
 
 import os
@@ -19,7 +23,7 @@ import logging
 import argparse
 
 from utils.logger import setup_logging
-from hardware.pwm_driver import DualPWMController  # GPIO12/13, default 50 Hz
+from hardware.pwm_driver import DualPWMController  # GPIO12/13, default 200 Hz
 
 LOG = logging.getLogger("pwm_manual")
 
@@ -43,7 +47,6 @@ def _start_pigpiod():
     for cmd in (["sudo", "pigpiod"], ["pigpiod"], ["sudo", "systemctl", "start", "pigpiod"]):
         LOG.info("pigpio daemon cmd %s", cmd)
         print("pigpio daemon cmd %s", cmd)
-
         try:
             subprocess.run(cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(0.3)
@@ -102,16 +105,33 @@ def _clamp(x: float, lo: float, hi: float) -> float:
 def main():
     setup_logging()
 
+    # ---------- parse flags ----------
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--step", type=float, default=0.1, help="per-press delta (0<step<=1); default 0.1")
+    ap.add_argument("--freq", type=int, default=200, help="PWM frequency in Hz; default 200")
+    args = ap.parse_args()
+
+    step = args.step
+    if not (0.0 < step <= 1.0):
+        LOG.warning("Invalid --step %.3f; clamping to 0.1", step)
+        step = 0.1
+
+    freq = int(args.freq) if args.freq and args.freq > 0 else 200
+
     # Only start pigpio daemon on Linux (Windows uses mock)
     if os.name != "nt":
         _start_pigpiod()
     else:
         LOG.info("Windows run: skipping pigpiod; mock pigpio will be used if available.")
 
-    ctrl = DualPWMController()  # set_speed expects [-1.0, +1.0]
+    # NOTE: GPIO pins are handled inside DualPWMController (now using 12/13)
+    ctrl = DualPWMController(frequency=freq)  # set_speed expects [-1.0, +1.0]
     speed = 0.0
     ctrl.set_speed(speed)
-    LOG.info("Ready. q:+10%%, z:-10%%, 0:stop, x:exit | speed=%.1f", speed)
+    LOG.info(
+        "Ready. q:+%.2f, z:-%.2f, 0:stop, x:exit | step=%.2f freq=%d Hz | speed=%.2f",
+        step, step, step, freq, speed
+    )
 
     def graceful_exit(_sig=None, _frm=None):
         LOG.info("Exiting… stopping PWM.")
@@ -131,19 +151,19 @@ def main():
                 continue
 
             if ch.lower() == "q":
-                speed = _clamp(round(speed + 0.1, 3), -1.0, 1.0)
+                speed = _clamp(round(speed + step, 3), -1.0, 1.0)
                 ctrl.set_speed(speed)
-                LOG.info("speed=%.1f", speed)
+                LOG.info("speed=%.2f", speed)
 
             elif ch.lower() == "z":
-                speed = _clamp(round(speed - 0.1, 3), -1.0, 1.0)
+                speed = _clamp(round(speed - step, 3), -1.0, 1.0)
                 ctrl.set_speed(speed)
-                LOG.info("speed=%.1f", speed)
+                LOG.info("speed=%.2f", speed)
 
             elif ch == "0":
                 speed = 0.0
                 ctrl.set_speed(speed)
-                LOG.info("speed=%.1f (STOP)", speed)
+                LOG.info("speed=%.2f (STOP)", speed)
 
             elif ch.lower() == "x":
                 graceful_exit()

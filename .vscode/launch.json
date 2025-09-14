@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Pi: motor_control (module)",
+      "name": "Pi: motor_control (200Hz, step 0.05)",
       "type": "debugpy",
       "request": "launch",
       "module": "utils.motor_control",
@@ -12,10 +12,11 @@
       "justMyCode": true,
       "env": {
         "PYTHONPATH": "${workspaceFolder}"
-      }
+      },
+      "args": ["--step", "0.05", "--freq", "200"]
     },
     {
-      "name": "Windows: motor_control (module)",
+      "name": "Windows: motor_control (200Hz, step 0.05)",
       "type": "debugpy",
       "request": "launch",
       "module": "utils.motor_control",
@@ -27,7 +28,8 @@
       "env": {
         "PYTHONPATH": "${workspaceFolder}",
         "PIGPIO_FORCE_MOCK": "1"
-      }
+      },
+      "args": ["--step", "0.05", "--freq", "200"]
     },
     {
       "name": "Python Debugger: Current File",
