@@ -1,41 +1,37 @@
 # hardware/pwm_driver.py
-
 import logging
+import os
 
 motor_log = logging.getLogger("motor")
 
-# Try real pigpio, else fall back to our test mock as a module
-try:
-    import pigpio as _pigpio
-except Exception:
+# Prefer real pigpio unless an override requests the mock
+_USE_MOCK = os.getenv("PIGPIO_FORCE_MOCK", "0") == "1"
+
+if not _USE_MOCK:
     try:
-        # module-style mock that provides pi() and constants (e.g., OUTPUT)
-        from test.mocks import mock_pigpio as _pigpio  # noqa: F401
+        import pigpio as _pigpio  # real library
+    except Exception:
+        _USE_MOCK = True
+
+if _USE_MOCK:
+    try:
+        from test.mocks import mock_pigpio as _pigpio  # module-style mock
     except Exception as e:
         _pigpio = None
         motor_log.error("Neither pigpio nor mock_pigpio available: %s", e)
 
 
-
 class DualPWMController:
     """
-    DualPWMController generates two hardware PWM signals using the pigpio library on a Raspberry Pi.
-    GPIO 18 (PWM0) and GPIO 19 (PWM1) are used as outputs. Both are initialized with 0% duty cycle
-    at a frequency of 50 Hz (default). The `command()` method accepts an integer to dynamically control
-    which output is active and at what duty cycle, simulating directional control (e.g., for motor drivers).
-    Positive input:
-        - Activates PWM0 (GPIO 18) with duty cycle proportional to value [1..32768]
-        - Sets PWM1 (GPIO 19) low (0% duty)
-    Negative input:
-        - Activates PWM1 (GPIO 19) with duty cycle proportional to |value| [1..32768]
-        - Sets PWM0 (GPIO 18) low
-    Zero input:
-        - Sets both outputs to 0% duty (low)
+    DualPWMController generates two hardware PWM signals using pigpio (or a test mock).
+    GPIO 18 (PWM0) and GPIO 19 (PWM1) are driven at `frequency` (default 50 Hz).
+    Use set_speed(value: float) with value in [-1.0, +1.0]:
+      value > 0 -> PWM0 active; value < 0 -> PWM1 active; 0 -> both off.
     Attributes:
-        pi (pigpio.pi): The pigpio interface instance.
-        freq (int): PWM frequency in Hz (default: 50).
-        gpio_pwm0 (int): GPIO pin for PWM0 (default: 18).
-        gpio_pwm1 (int): GPIO pin for PWM1 (default: 19).
+        pi: pigpio.pi() or mock
+        freq: int
+        gpio_pwm0: int (default 18)
+        gpio_pwm1: int (default 19)
     """
 
     def __init__(self, frequency: int = 50):
@@ -74,26 +70,15 @@ class DualPWMController:
 
     def set_speed(self, value: float):
         """
-        Set the PWM output based on the signed integer input.
-        Value must get rescaled for pigpio.
-        In the pigpio library, hardware_PWM(gpio, frequency, dutycycle)
-           expects a dutycycle between 0 and 1,000,000, or duty cycle in uSec
+        Set the PWM output based on the signed float input.
+        In pigpio, hardware_PWM(gpio, frequency, dutycycle) expects dutycycle 0..1_000_000.
         Args:
-            value (int): float in range [-1, +1]
-                         - Positive value: PWM0 active on GPIO 18
-                         - Negative value: PWM1 active on GPIO 19
-                         - Zero: both outputs inactive (low)
-        Returns:
-            None
-
+            value (float): range [-1, +1]
         """
-        value = value  # FLC output from -1.0 to +1.0
         # Negative value means reverse motor direction
         if value < 0.0:
-            # Convert negative input to a positive duty_val and clamp
             duty_val = min(-value, 1.0)  # Clamp to max 1.0
             self.duty_cycle_0 = 0
-            # pigpio.PWM expects a duty cycle in the range [0, 1_000_000]usec
             self.duty_cycle_1 = int(duty_val * 1_000_000)
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
@@ -104,6 +89,7 @@ class DualPWMController:
             self.duty_cycle_1 = 0
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
+
         else:  # value == 0.0 Stop motor
             self.duty_cycle_0 = 0
             self.duty_cycle_1 = 0
@@ -111,17 +97,13 @@ class DualPWMController:
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, 0)
 
         motor_log.debug(
-            "CW PWM_0 Dutycyle %d,  CCW PWM_1 Dutycyle %d",
+            "CW PWM_0 Dutycycle %d,  CCW PWM_1 Dutycycle %d",
             self.duty_cycle_0,
             self.duty_cycle_1,
         )
 
     def stop(self):
-        """
-        Stop both PWM outputs and release the pigpio interface.
-        Returns:
-            None
-        """
+        """Stop both PWM outputs and release the pigpio interface."""
         self.duty_cycle_0 = 0
         self.duty_cycle_1 = 0
         self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)

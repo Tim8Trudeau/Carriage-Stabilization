@@ -1,5 +1,7 @@
 # test/mocks/mock_pigpio.py
 
+OUTPUT = 1  # numeric like pigpio
+
 class _MockPi:
     """
     Minimal pigpio 'pi' mock with SPI support sufficient for spi_driver.SPIBus:
@@ -28,15 +30,16 @@ class _MockPi:
     # --- configuration helpers for tests ---
     def set_mode(self, gpio, mode):
         # optional; lets pwm_driver call it without errors
-        self._last_mode = (gpio, mode)
+        self._last_mode = (int(gpio), int(mode) if isinstance(mode, int) else mode)
 
     def hardware_PWM(self, gpio, frequency, dutycycle):
-        # record what was set, so tests can assert on it
-        self.pwm_states[gpio] = {
+        self.pwm_states[int(gpio)] = {
             "frequency": int(frequency),
             "dutycycle": int(dutycycle),
         }
+        return 0  # mimic pigpio success
 
+    # --- SPI helpers for tests ---
     def set_ctrl3c(self, val: int):
         self._ctrl3c_val = val & 0xFF
 
@@ -87,9 +90,6 @@ class _MockPi:
     def stop(self):
         self._stopped = True
 
-
-# pigpio module façade
-OUTPUT = "OUTPUT"
 
 def pi():
     return _MockPi()

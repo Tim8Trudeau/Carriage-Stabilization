@@ -1,117 +1,146 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-{"name":"Python Debugger: Current File","type":"debugpy","request":"launch","program":"${file}","console":"integratedTerminal"},
-        {
-            "name": "plot_omega_motor",
-            "type": "debugpy",
-            "request": "launch",
-            //"module": "plot_omega_motor_cmd",
-            "program": "${workspaceFolder}/utils/plot_omega_motor_cmd.py",
-            "console": "integratedTerminal",
-            "args": [],
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "plot_theta_motor",
-            "type": "debugpy",
-            "request": "launch",
-            //"module": "plot_theta_motor_cmd",
-            "program": "${workspaceFolder}/utils/plot_theta_motor_cmd.py",
-            "console": "integratedTerminal",
-            "args": [],
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "plot_simulation",
-            "type": "debugpy",
-            "request": "launch",
-            //"module": "plot_simulation",
-            "program": "${workspaceFolder}/utils/plot_simulation.py",
-            "console": "integratedTerminal",
-            "args": [],
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "plot_membership_shapes",
-            "type": "debugpy",
-            "request": "launch",
-            //"module": "plot_membership_shapes",
-            "program": "${workspaceFolder}/utils/plot_membership_shapes.py",
-            "console": "integratedTerminal",
-            "args": [],
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Python Debugger: Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Main",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/main.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Pytest: Run All Tests",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Pytest: Run Integration Tests",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "args": [
-                "-m",
-                "integration"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Pytest: Run Unit Tests",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "args": [
-                "-m",
-                "unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Pi: motor_control (module)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "utils.motor_control",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Windows: motor_control (module)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "utils.motor_control",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "justMyCode": true,
+      "subProcess": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "PIGPIO_FORCE_MOCK": "1"
+      }
+    },
+    {
+      "name": "Python Debugger: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "plot_omega_motor",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/utils/plot_omega_motor_cmd.py",
+      "console": "integratedTerminal",
+      "args": [],
+      "justMyCode": false,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "plot_theta_motor",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/utils/plot_theta_motor_cmd.py",
+      "console": "integratedTerminal",
+      "args": [],
+      "justMyCode": false,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "plot_simulation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/utils/plot_simulation.py",
+      "console": "integratedTerminal",
+      "args": [],
+      "justMyCode": false,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "plot_membership_shapes",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/utils/plot_membership_shapes.py",
+      "console": "integratedTerminal",
+      "args": [],
+      "justMyCode": false,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Python: Main",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Pytest: Run All Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Pytest: Run Integration Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-m", "integration"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Pytest: Run Unit Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-m", "unit"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    }
+  ]
 }
