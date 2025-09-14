@@ -43,8 +43,8 @@ def main_control_loop():
         return
 
     # --- 2. Initialize Components ---
-    target_hz = config["controller_params"]["TARGET_HZ"]
-    loop_period = 1.0 / target_hz
+    sample_hz = config["controller_params"]["SAMPLE_RATE_HZ"]
+    loop_period = 1.0 / sample_hz
 
     try:
         iir_filter = config.get("iir_filter", {})
@@ -63,7 +63,7 @@ def main_control_loop():
     # --- 3. Run Control Loop ---
     main_log.info(
         "Starting control loop at %.1f Hz (%.1f ms period)...",
-        target_hz,
+        sample_hz,
         loop_period * 1000,
     )
 

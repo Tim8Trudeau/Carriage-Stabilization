@@ -53,32 +53,32 @@ def test_positive_set_speed(patched_pwm_driver):
 
     # +50% forward: PWM0=50%, PWM1=0%
     pwm.set_speed(0.5)
-    assert pi.pwm_states[18]["frequency"] == pwm.freq
-    assert pi.pwm_states[18]["dutycycle"] == 500_000
-    assert pi.pwm_states[19]["frequency"] == pwm.freq
-    assert pi.pwm_states[19]["dutycycle"] == 0
+    assert pi.pwm_states[12]["frequency"] == pwm.freq
+    assert pi.pwm_states[12]["dutycycle"] == 500_000
+    assert pi.pwm_states[13]["frequency"] == pwm.freq
+    assert pi.pwm_states[13]["dutycycle"] == 0
 
     # -50% reverse: PWM0=50%, PWM1=0%
     pwm.set_speed(-0.5)
-    assert pi.pwm_states[18]["frequency"] == pwm.freq
-    assert pi.pwm_states[18]["dutycycle"] == 0
-    assert pi.pwm_states[19]["frequency"] == pwm.freq
-    assert pi.pwm_states[19]["dutycycle"] == 500_000
+    assert pi.pwm_states[12]["frequency"] == pwm.freq
+    assert pi.pwm_states[12]["dutycycle"] == 0
+    assert pi.pwm_states[13]["frequency"] == pwm.freq
+    assert pi.pwm_states[13]["dutycycle"] == 500_000
 
     # stop: both 0%
     pwm.set_speed(0.0)
-    assert pi.pwm_states[18]["dutycycle"] == 0
-    assert pi.pwm_states[19]["dutycycle"] == 0
+    assert pi.pwm_states[12]["dutycycle"] == 0
+    assert pi.pwm_states[13]["dutycycle"] == 0
 
     # -100% reverse: PWM0=0%, PWM1=100%
     pwm.set_speed(-1.0)
-    assert pi.pwm_states[18]["dutycycle"] == 0
-    assert pi.pwm_states[19]["dutycycle"] == 1_000_000
+    assert pi.pwm_states[12]["dutycycle"] == 0
+    assert pi.pwm_states[13]["dutycycle"] == 1_000_000
 
     # stop() also zeros and stops pigpio
     pwm.stop()
-    assert pi.pwm_states[18]["dutycycle"] == 0
-    assert pi.pwm_states[19]["dutycycle"] == 0
+    assert pi.pwm_states[12]["dutycycle"] == 0
+    assert pi.pwm_states[13]["dutycycle"] == 0
     assert getattr(pi, "_stopped", False) is True
 
 
@@ -90,27 +90,27 @@ def test_clamping(patched_pwm_driver):
 
     # absurdly large positive clamps to 100%
     pwm.set_speed(99999)
-    assert pi.pwm_states[18]["dutycycle"] == 1_000_000
-    assert pi.pwm_states[19]["dutycycle"] == 0
+    assert pi.pwm_states[12]["dutycycle"] == 1_000_000
+    assert pi.pwm_states[13]["dutycycle"] == 0
 
     # absurdly large negative clamps to -100%
     pwm.set_speed(-99999)
-    assert pi.pwm_states[18]["dutycycle"] == 0
-    assert pi.pwm_states[19]["dutycycle"] == 1_000_000
+    assert pi.pwm_states[12]["dutycycle"] == 0
+    assert pi.pwm_states[13]["dutycycle"] == 1_000_000
 
     # tiny positive maps to small duty on channel 0
     pwm.set_speed(0.01)
-    assert 0 < pi.pwm_states[18]["dutycycle"] <= 10_000
-    assert pi.pwm_states[19]["dutycycle"] == 0
+    assert 0 < pi.pwm_states[12]["dutycycle"] <= 10_000
+    assert pi.pwm_states[13]["dutycycle"] == 0
 
     # Test clamping of small negative speed
     pwm.set_speed(-0.01)
-    assert 0 < pwm.pi.pwm_states[19]["dutycycle"] <= 10_000
+    assert 0 < pwm.pi.pwm_states[13]["dutycycle"] <= 10_000
 
     #Test Stop
     pwm.stop()
-    assert pwm.pi.pwm_states[18]["dutycycle"] == 0
-    assert pwm.pi.pwm_states[19]["dutycycle"] == 0
+    assert pwm.pi.pwm_states[12]["dutycycle"] == 0
+    assert pwm.pi.pwm_states[13]["dutycycle"] == 0
 
 @pytest.mark.unit
 def test_zero_input(patched_pwm_driver):
@@ -119,6 +119,6 @@ def test_zero_input(patched_pwm_driver):
     pi = pwm.pi  # mock pigpio instance with pwm_states
 
     pwm.set_speed(0)
-    assert pwm.pi.pwm_states[18]["dutycycle"] == 0
-    assert pwm.pi.pwm_states[19]["dutycycle"] == 0
+    assert pwm.pi.pwm_states[12]["dutycycle"] == 0
+    assert pwm.pi.pwm_states[13]["dutycycle"] == 0
     pwm.stop()

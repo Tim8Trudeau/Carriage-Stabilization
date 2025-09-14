@@ -24,7 +24,7 @@ if _USE_MOCK:
 class DualPWMController:
     """
     DualPWMController generates two hardware PWM signals using pigpio (or a test mock).
-    GPIO 12 (PWM0) and GPIO 13 (PWM1) are driven at `frequency` (default 50 Hz).
+    GPIO 12 (PWM0) and GPIO 13 (PWM1) are driven at `frequency` (default 200 Hz).
     Use set_speed(value: float) with value in [-1.0, +1.0]:
       value > 0 -> PWM0 active; value < 0 -> PWM1 active; 0 -> both off.
     Attributes:
@@ -34,12 +34,12 @@ class DualPWMController:
         gpio_pwm1: int (default 13)
     """
 
-    def __init__(self, frequency: int = 50):
+    def __init__(self, frequency: int = 200):
         """
         Initialize the PWM controller with given frequency (Hz).
         Both PWM channels start at 0% duty.
         Args:
-            frequency (int): PWM signal frequency in Hz (default: 50).
+            frequency (int): PWM signal frequency in Hz (default: 200).
         """
         if _pigpio is None:
             raise ImportError("pigpio not available and test.mocks.mock_pigpio not found")

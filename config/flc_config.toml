@@ -1,5 +1,6 @@
 [controller_params]
-TARGET_HZ = 50.0
+MOTOR_HZ = 200.0           # Motor PWM Freq
+SAMPLE_RATE_HZ = 50.0      # dt = 1 / SAMPLE_RATE_HZ : read IMU 20msec
 
 # --- FLC Scaling factors ---
 [flc_scaling]

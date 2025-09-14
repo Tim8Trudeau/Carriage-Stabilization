@@ -1,8 +1,5 @@
-[controller_params]
-TARGET_HZ = 50.0
-
 [simulation.timing]
-SAMPLE_RATE_HZ = 50.0           # dt = 1 / SAMPLE_RATE_HZ
+SAMPLE_RATE_HZ = 50.0            # dt = 1 / SAMPLE_RATE_HZ : read IMU 20msec
 DURATION_S     = 10.0            # total simulated seconds
 
 [simulation.initial_conditions]

@@ -24,7 +24,7 @@ def run_time_series(config_path: str,
                     theta_step_deg: float,
                     omega_mode: str,
                     omega_slope: float,
-                    sample_interval_ms: int = 10,
+                    sample_interval_ms: int = 20,
                     save: bool = False):
     """
     Generate a time-series plot where synthetic IMU data flows through the same
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # Read config to derive defaults
     with open(config_path, "rb") as f:
         _cfg = tomllib.load(f)
-    default_hz = float(_cfg["controller_params"].get("TARGET_HZ", 50.0))
+    default_hz = float(_cfg["controller_params"].get("SAMPLE_RATE_HZ", 50.0))
     default_samples = int(default_hz * 2)  # ~2 seconds
 
     # From TOML unless overridden
