@@ -24,14 +24,14 @@ if _USE_MOCK:
 class DualPWMController:
     """
     DualPWMController generates two hardware PWM signals using pigpio (or a test mock).
-    GPIO 18 (PWM0) and GPIO 19 (PWM1) are driven at `frequency` (default 50 Hz).
+    GPIO 12 (PWM0) and GPIO 13 (PWM1) are driven at `frequency` (default 50 Hz).
     Use set_speed(value: float) with value in [-1.0, +1.0]:
       value > 0 -> PWM0 active; value < 0 -> PWM1 active; 0 -> both off.
     Attributes:
         pi: pigpio.pi() or mock
         freq: int
-        gpio_pwm0: int (default 18)
-        gpio_pwm1: int (default 19)
+        gpio_pwm0: int (default 12)
+        gpio_pwm1: int (default 13)
     """
 
     def __init__(self, frequency: int = 50):
@@ -47,8 +47,8 @@ class DualPWMController:
         self.freq = frequency
         self.duty_cycle_0 = 0
         self.duty_cycle_1 = 0
-        self.gpio_pwm0 = 18
-        self.gpio_pwm1 = 19
+        self.gpio_pwm0 = 12
+        self.gpio_pwm1 = 13
 
         self.pi = _pigpio.pi()
 

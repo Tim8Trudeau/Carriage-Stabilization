@@ -26,18 +26,6 @@
 |   +-- pwm_driver.py
 |   \-- spi_driver.py
 +-- [logs]
-|   +-- controller.log
-|   +-- defuzzifier.log
-|   +-- fuzzifier.log
-|   +-- imu.log
-|   +-- main.log
-|   +-- motor.log
-|   +-- profiler.log
-|   +-- rule_engine.log
-|   +-- simloop.log
-|   +-- simulation.log
-|   +-- spi.log
-|   \-- WZ_engine.log
 +-- [plots]
 |   +-- omega_membership_functions.png
 |   +-- omega_motor_cmd.png

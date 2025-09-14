@@ -19,7 +19,7 @@ import logging
 import argparse
 
 from utils.logger import setup_logging
-from hardware.pwm_driver import DualPWMController  # GPIO18/19, default 50 Hz
+from hardware.pwm_driver import DualPWMController  # GPIO12/13, default 50 Hz
 
 LOG = logging.getLogger("pwm_manual")
 
