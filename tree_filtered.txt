@@ -21,6 +21,7 @@
 |   \-- rule_engine.py
 +-- [hardware]
 |   +-- __init__.py
+|   +-- __init__LSM6DS3TR_driver.py
 |   +-- imu_driver.py
 |   +-- LSM6DS3TR_driver.py
 |   +-- pwm_driver.py
@@ -63,6 +64,7 @@
 |   +-- [unit]
 |   |   +-- __init__.py
 |   |   +-- test_imu_driver_unit.py
+|   |   +-- test_lsm6ds3tr_driver_mapping.py
 |   |   +-- test_pwm_driver_unit.py
 |   |   \-- test_spi_driver_unit.py
 |   +-- __init__.py
