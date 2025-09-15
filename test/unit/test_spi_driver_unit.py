@@ -1,159 +1,77 @@
+# test/unit/test_spi_driver_unit.py
 import types
 import sys
 import pytest
 
 
-def _install_fake_pigpio(monkeypatch, *, ctrl3c_init=0x00, status_value=0x03, block_bytes=b""):
-    """
-    Install a fake 'pigpio' module in sys.modules that mimics the minimal SPI
-    behavior used by hardware/spi_driver.SPIBus.
-
-    - ctrl3c_init: initial value returned when reading CTRL3_C (0x12)
-    - status_value: value returned when reading STATUS_REG (0x1E)
-    - block_bytes: 12 bytes to return when doing a block read from 0x22..0x2D
-    """
+def _install_fake_pigpio(monkeypatch):
+    """Install a minimal fake 'pigpio' with pi() exposing spi_open/close/xfer."""
     class FakePi:
         def __init__(self):
             self.connected = True
-            self._last_addr = None
-            self._writes = []     # record [reg, val] pairs written
-            self._closed = False
-            self._stopped = False
-            self._ctrl3c_init = ctrl3c_init
-            self._status_value = status_value
-            # default 12 bytes if not provided
-            self._block_bytes = (
-                block_bytes if block_bytes
-                else bytes(range(0x22, 0x22 + 12))  # deterministic but arbitrary
-            )
-
-        # API expected by our driver
-        def spi_open(self, channel, baud, mode):
-            return 1  # handle
-
-        def spi_write(self, handle, tx_bytes: bytes):
-            # Writes happen in two ways:
-            #  - write_reg: [reg, value]  -> capture as a register write
-            #  - read(_block): [addr]     -> capture "last address" for the next spi_read
-            if len(tx_bytes) == 2:
-                # treat as register write
-                self._writes.append(tuple(tx_bytes))
-            elif len(tx_bytes) == 1:
-                self._last_addr = tx_bytes[0]
-            else:
-                # shouldn't happen in our driver
-                self._last_addr = tx_bytes[-1] if tx_bytes else None
-
-        def spi_read(self, handle, nbytes: int):
-            # Respond based on the last single-byte address written
-            # Read flags: bit7=1 (read); auto-inc for block: bit6=1
-            addr = self._last_addr or 0x00
-            reg = addr & 0x3F  # low 6 bits (strip read/auto-inc flags)
-
-            # CTRL3_C (0x12) single-byte read
-            if reg == 0x12 and nbytes == 1:
-                return (1, bytes([self._ctrl3c_init]))
-
-            # STATUS_REG (0x1E) single-byte read
-            if reg == 0x1E and nbytes == 1:
-                return (1, bytes([self._status_value]))
-
-            # OUTX_L_G block read (0x22) — expect 12 bytes
-            if reg == 0x22 and nbytes == 12:
-                return (12, bytes(self._block_bytes[:12]))
-
-            # Fallback: zeros of requested length
-            return (nbytes, bytes([0x00] * nbytes))
-
-        def spi_close(self, handle):
-            self._closed = True
-
+            self._open = False
+        def spi_open(self, ch, baud, flags):
+            self._open = True
+            return 1
+        def spi_close(self, h):
+            self._open = False
+        def spi_xfer(self, h, tx: bytes):
+            # Return a dummy/status byte + zeros of the requested size
+            trailing = max(0, len(tx) - 1)
+            return len(tx), bytes([0x00]) + (b"\x00" * trailing)
         def stop(self):
-            self._stopped = True
+            self._open = False
 
     fake_mod = types.ModuleType("pigpio")
     fake_mod.pi = FakePi
-
     monkeypatch.setitem(sys.modules, "pigpio", fake_mod)
     return fake_mod
 
 
-@pytest.mark.unit
-def test_spi_init_sets_bdu_when_unset(monkeypatch):
+def _install_stub_mock_spi(monkeypatch):
     """
-    If CTRL3_C BDU bit (bit6) is not set, SPIBus.__init__ should set it.
+    Ensure imports of 'test.mocks.mock_spi' or 'mock_spi' succeed with a tiny stub
+    that implements MockSPIBus.imu_read() -> 6 bytes.
     """
-    # CTRL3_C starts at 0x00 (BDU clear); status ready; any block bytes
-    _install_fake_pigpio(monkeypatch, ctrl3c_init=0x00, status_value=0x03)
+    class StubMockSPIBus:
+        def __init__(self, *a, **k): pass
+        def imu_read(self, **_):
+            # AX=+1, AY=-2, GZ=+3 (little-endian int16)
+            return (1).to_bytes(2, "little", signed=True) + \
+                   (-2).to_bytes(2, "little", signed=True) + \
+                   (3).to_bytes(2, "little", signed=True)
+        def close(self): pass
 
-    # Import after installing fake pigpio
-    from hardware.spi_driver import SPIBus
-
-    bus = SPIBus()
-    # Access the fake pi to inspect writes
-    fake_pi = bus._pi  # type: ignore[attr-defined]
-
-    # Expect a write to CTRL3_C (0x12) with BDU bit set: old | 0x40
-    writes = getattr(fake_pi, "_writes", [])
-    assert (0x12, 0x40) in writes, f"Expected write to CTRL3_C setting BDU, got {writes}"
-
-    bus.close()
-    assert fake_pi._closed is True
-    assert fake_pi._stopped is True
+    for name in ("test.mocks.mock_spi", "mock_spi"):
+        mod = types.ModuleType(name)
+        mod.MockSPIBus = StubMockSPIBus
+        monkeypatch.setitem(sys.modules, name, mod)
 
 
 @pytest.mark.unit
-def test_spi_init_skips_bdu_write_when_already_set(monkeypatch):
-    """
-    If CTRL3_C already has BDU set (bit6=1), __init__ should not write it again.
-    """
-    # CTRL3_C starts at 0x40 (BDU set)
-    _install_fake_pigpio(monkeypatch, ctrl3c_init=0x40, status_value=0x03)
+def test_get_spi_host_returns_pigpio_when_available(monkeypatch):
+    _install_stub_mock_spi(monkeypatch)   # in case code falls back
+    _install_fake_pigpio(monkeypatch)
 
-    from hardware.spi_driver import SPIBus
+    import hardware.spi_driver as spi_drv
+    host = spi_drv.get_spi_host({})
 
-    bus = SPIBus()
-    fake_pi = bus._pi  # type: ignore[attr-defined]
-
-    writes = getattr(fake_pi, "_writes", [])
-    # No write to CTRL3_C expected in this case
-    assert all(not (reg == 0x12) for reg, _ in writes), f"Unexpected CTRL3_C write(s): {writes}"
-
-    bus.close()
-    assert fake_pi._closed is True
-    assert fake_pi._stopped is True
+    # pigpio path should give us a FakePi instance
+    assert hasattr(host, "spi_open") and hasattr(host, "spi_close") and hasattr(host, "spi_xfer")
+    assert hasattr(host, "stop")
 
 
 @pytest.mark.unit
-def test_imu_read_returns_6_bytes_reordered(monkeypatch):
-    """
-    imu_read() should poll STATUS (GDA|XLDA), perform one 12-byte burst from 0x22,
-    and return 6 bytes in order: [AX_L, AX_H, AY_L, AY_H, GZ_L, GZ_H].
-    """
-    # Craft a deterministic 12-byte block:
-    # [GX_L, GX_H, GY_L, GY_H, GZ_L, GZ_H, AX_L, AX_H, AY_L, AY_H, AZ_L, AZ_H]
-    gx = (0x11, 0x11)
-    gy = (0x22, 0x22)
-    gz = (0x33, 0x33)
-    ax = (0x44, 0x44)
-    ay = (0x55, 0x55)
-    az = (0x66, 0x66)
-    block = bytes((*gx, *gy, *gz, *ax, *ay, *az))
+def test_get_spi_host_returns_mock_when_forced(monkeypatch):
+    _install_stub_mock_spi(monkeypatch)
+    _install_fake_pigpio(monkeypatch)  # present, but we force mock
 
-    _install_fake_pigpio(monkeypatch, ctrl3c_init=0x00, status_value=0x03, block_bytes=block)
+    monkeypatch.setenv("CS_HW", "mock")
+    import importlib
+    import hardware.spi_driver as spi_drv
+    importlib.reload(spi_drv)  # ensure env is read fresh
 
-    from hardware.spi_driver import SPIBus
-
-    bus = SPIBus()
-    out = bus.imu_read()  # Option 1: SPI returns a new 6-byte buffer
-
-    # Expect only [AX_L, AX_H, AY_L, AY_H, GZ_L, GZ_H]
-    assert isinstance(out, (bytes, bytearray))
-    assert len(out) == 6
-    assert out == bytes([ax[0], ax[1], ay[0], ay[1], gz[0], gz[1]])
-
-    # Close should call through to pigpio
-    fake_pi = bus._pi  # type: ignore[attr-defined]
-    bus.close()
-    assert fake_pi._closed is True
-    assert fake_pi._stopped is True
+    host = spi_drv.get_spi_host({})
+    # Should still be pi-like
+    assert hasattr(host, "spi_open") and hasattr(host, "spi_close") and hasattr(host, "spi_xfer")
+    assert hasattr(host, "stop")

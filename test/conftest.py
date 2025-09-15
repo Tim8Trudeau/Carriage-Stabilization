@@ -1,34 +1,39 @@
 # test/conftest.py
 import pytest
 
-def _pack3(x, y, g):
-    def p(v):
-        return int(v).to_bytes(2, "little", signed=True)
+INT16_MAX = 32767
+INT16_MIN = -32768
+
+
+def _cap_int16(v: int) -> int:
+    return max(INT16_MIN, min(INT16_MAX, int(v)))
+
+
+def _pack3(x: int, y: int, g: int) -> bytes:
+    """Little-endian int16 packing for (x_raw, y_raw, omega_raw)."""
+    def p(val: int) -> bytes:
+        return int(_cap_int16(val)).to_bytes(2, "little", signed=True)
     return p(x) + p(y) + p(g)
 
-class FakeSPI:
+
+class FakeDevSeq:
     """
-    Minimal SPI replacement with scripted outputs.
-    Provide an iterable of (x_raw, y_raw, omega_raw).
+    Device-driver stub compatible with LSM6DS3TRDriver's public API.
+    Plays back a sequence of (x, y, omega) raw int16 triples.
     """
-    def __init__(self, samples):
-        self._seq = list(samples)
+    def __init__(self, *, seq=None):
+        triples = seq or [(0, 0, 0)]
+        self._seq = [_pack3(x, y, g) for (x, y, g) in triples]
         self._i = 0
         self.closed = False
 
-    def load_samples(self, samples):
-        self._seq = list(samples)
-        self._i = 0
-
-    def imu_read(self, **_):
-        if not self._seq:
-            x, y, g = 0, 0, 0
-        elif self._i < len(self._seq):
-            x, y, g = self._seq[self._i]
+    def read_ax_ay_gz_bytes(self, *_, **__) -> bytes:
+        if self._i < len(self._seq):
+            buf = self._seq[self._i]
             self._i += 1
         else:
-            x, y, g = self._seq[-1]
-        return _pack3(x, y, g)
+            buf = self._seq[-1]
+        return buf
 
     def close(self):
         self.closed = True
@@ -37,24 +42,24 @@ class FakeSPI:
 @pytest.fixture
 def make_imu(monkeypatch):
     """
-    Factory that builds an IMU_Driver instance with:
-      - SPI replaced by FakeSPI (scripted samples)
-      - CRITICAL: patch the SPIBus SYMBOL inside imu_driver before construction
-    Returns a builder: make_imu(samples, iir_params=None, ctrl_params=None)
+    Build an IMU_Driver wired to a FakeDevSeq (new architecture).
+    Usage:
+        imu, fake = make_imu(samples=[(x,y,ω), ...], iir_params=..., ctrl_params=...)
     """
     def _builder(samples, iir_params=None, ctrl_params=None):
         import hardware.imu_driver as imu_mod
 
-        # Patch the imported SPIBus symbol inside imu_driver
-        monkeypatch.setattr(
-            imu_mod,
-            "SPIBus",
-            lambda *_a, **_k: FakeSPI(samples),
-            raising=False,
-        )
+        dev_ref = {}
+
+        def _driver_factory(*_a, **_k):
+            dev = FakeDevSeq(seq=samples)
+            dev_ref["dev"] = dev
+            return dev
+
+        # Patch the device driver class used by imu_driver
+        monkeypatch.setattr(imu_mod, "LSM6DS3TRDriver", _driver_factory, raising=True)
 
         imu = imu_mod.IMU_Driver(iir_params or {}, ctrl_params or {})
-        fake = imu.spi  # expose the FakeSPI instance
-        return imu, fake
+        return imu, dev_ref["dev"]
 
     return _builder
