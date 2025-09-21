@@ -1,30 +1,15 @@
+# utils/plot_simulation.py
 from __future__ import annotations
-from utils.logger import setup_logging
-import math
-import logging, os
-import tomllib
-import matplotlib.pyplot as plt
-
-from test.mocks.mock_spi import MockSPIBus, set_motor_cmd
+import math, logging, os, tomllib, matplotlib.pyplot as plt
 from utils.logger import setup_logging, set_loop_index
-
-# Import your actual FLC controller here:
-try:
-    from controller import FLCController
-except Exception:
-    from flc.controller import FLCController  # type: ignore
-
+from flc.controller import FLCController
+from hardware.imu_driver import IMU_Driver
 
 def load_sim_config(path="config/sim_config.toml") -> dict:
-    with open(path, "rb") as f:
-        return tomllib.load(f)
-
+    with open(path, "rb") as f: return tomllib.load(f)
 def load_flc_config(path="config/flc_config.toml") -> dict:
-    with open(path, "rb") as f:
-        return tomllib.load(f)
-
-def clamp(v, lo, hi):
-    return lo if v < lo else hi if v > hi else v
+    with open(path, "rb") as f: return tomllib.load(f)
+def clamp(v, lo, hi): return lo if v < lo else hi if v > hi else v
 
 def _setup_loop_logger():
     os.makedirs("logs", exist_ok=True)
@@ -32,122 +17,96 @@ def _setup_loop_logger():
     if not log.handlers:
         fh = logging.FileHandler("logs/simloop.log", mode="w", encoding="utf-8")
         fmt = logging.Formatter("%(relativeCreated)d | %(levelname)s | %(name)s | %(message)s")
-        fh.setFormatter(fmt)
-        log.addHandler(fh)
-        log.setLevel(logging.INFO)
+        fh.setFormatter(fmt); log.addHandler(fh); log.setLevel(logging.INFO)
     return log
-
 
 def main():
     setup_logging()
     sim_cfg = load_sim_config()
     flc_cfg = load_flc_config()
     log_sim = _setup_loop_logger()
-    logs = setup_logging()
-    timing = sim_cfg["simulation"]["timing"]
-    imu = sim_cfg["simulation"]["imu_model"]
 
-    hz = float(timing.get("SAMPLE_RATE_HZ", 50.0))
-    dt = 1.0 / hz
+    timing  = sim_cfg["simulation"]["timing"]
+    imu_cfg = sim_cfg["simulation"]["imu_model"]
+    init    = sim_cfg["simulation"].get("initial_conditions", {})
+
+    hz = float(timing.get("SAMPLE_RATE_HZ", 50.0)); dt = 1.0 / hz
     steps = int(float(timing.get("DURATION_S", 10.0)) * hz)
+    gyro_fs = float(imu_cfg.get("GYRO_FS_RAD_S", 4.363))
+    raw_fs  = int(imu_cfg.get("ACCEL_RAW_FS", 16384))
 
-    gyro_fs = float(imu.get("GYRO_FS_RAD_S", 4.363))
-    raw_fs = int(imu.get("ACCEL_RAW_FS", 16384))
-
-    # FLC normalization ranges (kept in flc_config.toml)
-    ctrl_params = flc_cfg.get("controller_params", {})
+    ctrl_params = dict(flc_cfg.get("controller_params", {}))
     theta_range_rad = float(ctrl_params.get("THETA_RANGE_RAD", math.pi))
-    # omega is normalized by gyro_fs_rad_s (unit-consistent with simulator)
 
-    # Build controller and SPI (sim)
+    # Tell hardware stack we're simulating
+    ctrl_params["SIM_MODE"] = True
+
     flc = FLCController(flc_cfg)
-    spi = MockSPIBus(controller_params=ctrl_params, sim_config_path="config/sim_config.toml")
+    imu = IMU_Driver(
+        iir_params={
+            "SAMPLE_RATE_HZ": hz,
+            "ACCEL_CUTOFF_HZ": float(flc_cfg.get("iir_params", {}).get("ACCEL_CUTOFF_HZ", 4.0)),
+            "CUTOFF_FREQ_HZ": float(flc_cfg.get("iir_params", {}).get("CUTOFF_FREQ_HZ", 5.0)),
+        },
+        controller_params={
+            **ctrl_params,
+            "ACCEL_RAW_FS": raw_fs,
+            "GYRO_FULL_SCALE_RADS_S": gyro_fs,
+            "THETA_RANGE_RAD": theta_range_rad,
+        },
+    )
 
-    # logging buffers
-    t = [0.0] * steps
-    theta = [0.0] * steps
-    omega = [0.0] * steps
-    u_cmd = [0.0] * steps
-    theta_sim = [0.0] * steps
-    theta_imu = [0.0] * steps
+    log_sim.info("Simulation ICs: THETA_INITIAL_RAD=%s OMEGA_INITIAL_RAD_S=%s",
+                 init.get("THETA_INITIAL_RAD"), init.get("OMEGA_INITIAL_RAD_S"))
 
-    # loop
+    # Buffers
+    t = [0.0] * steps; theta_sim = [float("nan")] * steps
+    theta_imu = [0.0] * steps; omega = [0.0] * steps; u_cmd = [0.0] * steps
+
+    # Helpers using the driver pass-throughs (no mock imports)
+    def _set_motor_cmd(cmd: float) -> None:
+        f = getattr(getattr(imu, "_dev", None), "set_motor_cmd", None)
+        if callable(f): f(cmd)
+    def _get_sim_theta():
+        f = getattr(getattr(imu, "_dev", None), "get_sim_theta", None)
+        try: return float(f()) if callable(f) else float("nan")
+        except Exception: return float("nan")
+
+    # Loop
     time_acc = 0.0
     for i in range(steps):
         set_loop_index(i)
-        # IMU read (raw)
-        buf = spi.imu_read()
-        x_raw = int.from_bytes(buf[0:2], "little", signed=True)
-        y_raw = int.from_bytes(buf[2:4], "little", signed=True)
-        omega_raw = int.from_bytes(buf[4:6], "little", signed=True)
 
-        # Convert to θ, ω (match runtime conventions)
-        theta_rad = math.atan2(x_raw, y_raw)  # consistent with CW positive
-        omega_rad_s = (omega_raw / raw_fs) * gyro_fs
+        theta_norm, omega_norm = imu.read_normalized()
+        theta_rad = clamp(theta_norm, -1.0, 1.0) * theta_range_rad
+        omega_rad_s = clamp(omega_norm, -1.0, 1.0) * gyro_fs
 
-        # Normalize for FLC
-        theta_norm = clamp(theta_rad / theta_range_rad, -1.0, 1.0)
-        omega_norm = clamp(omega_rad_s / gyro_fs, -1.0, 1.0)
-
-        # Controller output
         motor_cmd = flc.calculate_motor_cmd(theta_norm, omega_norm)
-        set_motor_cmd(motor_cmd)
+        _set_motor_cmd(motor_cmd)
 
-        # NEW: pull simulator θ from the mock and log both
-        th_sim = getattr(spi, "get_sim_theta", lambda: float("nan"))()
+        th_sim = _get_sim_theta()
         log_sim.info(
-            "t= %.3f | th_imu= %.3f rad | th_norm= %.3f rad | om_imu= %.3f rad/s | om_norm= %.3f rad/s | cmd= %.3f",
+            "t= %.3f | th_imu= %.3f rad | th_norm= %.3f | om_imu= %.3f rad/s | om_norm= %.3f | cmd= %.3f",
             time_acc, theta_rad, theta_norm, omega_rad_s, omega_norm, motor_cmd
         )
 
         time_acc += dt
+        t[i] = time_acc; theta_sim[i] = th_sim
+        theta_imu[i] = theta_rad; omega[i] = omega_rad_s; u_cmd[i] = motor_cmd
 
-        # Store per-step values
-        t[i] = time_acc
-        theta_imu[i] = theta_rad
-        omega[i] = omega_rad_s
-        u_cmd[i] = motor_cmd
-
-        # Grab simulator theta from the SPI wrapper each step
-        get_sim_theta = getattr(spi, "get_sim_theta", None)
-        theta_sim[i] = float(get_sim_theta()) if callable(get_sim_theta) else float("nan")
-
-
-    # --- plot (shared time axis) ---
+    # Plot
+    import matplotlib.pyplot as plt
     fig, ax1 = plt.subplots(figsize=(10, 5))
     ax1.set_title("Carriage Simulation — θ, ω, motor_cmd vs time")
-    ax1.set_xlabel("Time (s)")
-    ax1.grid(True, which="both", alpha=0.25)
-    ax1.axhline(0.0, linestyle="--", linewidth=0.8)  # left-axis zero line
-
-    # Left y-axis: theta & omega
+    ax1.set_xlabel("Time (s)"); ax1.grid(True, which="both", alpha=0.25); ax1.axhline(0.0, linestyle="--", linewidth=0.8)
     lh0, = ax1.plot(t, theta_sim, linewidth=1.0, alpha=0.4, label="theta_sim (rad)")
     lh1, = ax1.plot(t, theta_imu, linewidth=1.5,            label="theta_imu (rad)")
     lh2, = ax1.plot(t, omega, label="omega (rad/s)")
-
-    # Right y-axis: motor_cmd
-    ax2 = ax1.twinx()
-    ax2.set_ylabel("motor_cmd")
-    ax2.set_ylim(-1.5, 1.5)
-
-    # Plot motor_cmd
-    rh1, = ax2.plot(t, u_cmd, color="red", label="motor_cmd (−1..+1)")
-
-    # Add zero line to right axis too
-    ax2.axhline(0.0, color="red", linestyle="--", linewidth=0.8)
-
-    # Build a joint legend
-    lines = [lh0, lh1, lh2, rh1]
-    labels = [str(l.get_label()) for l in lines]
-    ax1.legend(lines, labels, loc="best")
-    plt.tight_layout()
-
-    # Save and display
-    out_dir = "plots"
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, "sim_output.png")
-    plt.savefig(out_path, dpi=150, bbox_inches="tight")
-    plt.show()
+    ax2 = ax1.twinx(); ax2.set_ylabel("motor_cmd"); ax2.set_ylim(-1.5, 1.5)
+    rh1, = ax2.plot(t, u_cmd, label="motor_cmd (−1..+1)")
+    ax1.legend([lh0, lh1, lh2, rh1], [l.get_label() for l in [lh0, lh1, lh2, rh1]], loc="best")
+    plt.tight_layout(); os.makedirs("plots", exist_ok=True)
+    plt.savefig(os.path.join("plots", "sim_output.png"), dpi=150, bbox_inches="tight"); plt.show()
 
 if __name__ == "__main__":
     main()

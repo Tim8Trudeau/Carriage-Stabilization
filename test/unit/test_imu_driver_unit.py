@@ -2,10 +2,9 @@
 import math
 import pytest
 
-
 INT16_MAX = 32767
 INT16_MIN = -32768
-ACC_FS = 16384  # ≈ 1 g in raw counts
+ACC_FS = 16384
 
 
 def _cap_int16(v: int) -> int:
@@ -33,7 +32,7 @@ class _FakeDevOnce:
 class _FakeDevSeq:
     """Device driver stub that plays back a sequence of (x,y,g) samples."""
     def __init__(self, *a, seq=None, **k):
-        self._seq = [ _pack3(x, y, g) for (x, y, g) in (seq or [(0,0,0)]) ]
+        self._seq = [_pack3(x, y, g) for (x, y, g) in (seq or [(0, 0, 0)])]
         self._i = 0
         self.closed = False
     def read_ax_ay_gz_bytes(self, *a, **k) -> bytes:
@@ -51,25 +50,24 @@ class _FakeDevSeq:
 @pytest.mark.parametrize(
     "raw_y, raw_x, raw_omega",
     [
-        (16384, 0, 0),              # Top of circle y=max, x=0, Omega=0
-        (16135, 2845, 0),           # ~10° CW,   Omega=0
-        (0, 16384, 0),              # 90° CW,    Omega=0
-        (11585, 11585, 1000),       # 45° CW,    positive omega (CW)
-        (-11585, 11585, 1000),      # ~135° CW
-        (0, 16384, -1000),          # 90° CW,    negative omega (CCW)
-        (0, -16384, 0),             # 90° CCW,   Omega=0
-        (-8191, 14188, -1000),      # ~120° CW,  negative omega
-        (-8191, -14188, 1000),      # ~120° CCW, positive omega
-        (-11585, 11585, 0),         # ~135° CW
-        (-16384, 0, 0),             # Bottom (180°)
-        (8192, -14188, 500),        # ~-60°,     positive omega
+        (16384, 0, 0),
+        (16135, 2845, 0),
+        (0, 16384, 0),
+        (11585, 11585, 1000),
+        (-11585, 11585, 1000),
+        (0, 16384, -1000),
+        (0, -16384, 0),
+        (-8191, 14188, -1000),
+        (-8191, -14188, 1000),
+        (-11585, 11585, 0),
+        (-16384, 0, 0),
+        (8192, -14188, 500),
     ],
 )
 def test_read_normalized_from_inputs(monkeypatch, raw_y, raw_x, raw_omega):
     """IMU_Driver consumes 6 bytes from LSM6DS3TRDriver and normalizes them."""
     import hardware.imu_driver as imu_mod
 
-    # One fixed sample for this case
     buf = _pack3(raw_x, raw_y, raw_omega)
     monkeypatch.setattr(
         imu_mod, "LSM6DS3TRDriver",
@@ -77,7 +75,6 @@ def test_read_normalized_from_inputs(monkeypatch, raw_y, raw_x, raw_omega):
         raising=True,
     )
 
-    # High cutoffs so LP filters have minimal lag; read a few frames to settle
     iir_params = {"SAMPLE_RATE_HZ": 50.0, "ACCEL_CUTOFF_HZ": 50.0, "CUTOFF_FREQ_HZ": 50.0}
     controller_params = {"ACCEL_RAW_FS": ACC_FS, "THETA_RANGE_RAD": math.pi, "GYRO_FULL_SCALE_RADS_S": 4.363}
 
@@ -139,5 +136,4 @@ def test_imu_driver_reads_sequence(monkeypatch):
     finally:
         imu.close()
 
-    # should rise after the step
     assert vals[-1] > vals[1]

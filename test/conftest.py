@@ -18,7 +18,7 @@ def _pack3(x: int, y: int, g: int) -> bytes:
 
 class FakeDevSeq:
     """
-    Device-driver stub compatible with LSM6DS3TRDriver's public API.
+    Device-driver stub compatible with LSM6DS3TR_i2c_driver.LSM6DS3TRDriver's public API.
     Plays back a sequence of (x, y, omega) raw int16 triples.
     """
     def __init__(self, *, seq=None):
@@ -42,7 +42,7 @@ class FakeDevSeq:
 @pytest.fixture
 def make_imu(monkeypatch):
     """
-    Build an IMU_Driver wired to a FakeDevSeq (new architecture).
+    Build an IMU_Driver wired to a FakeDevSeq (new I2C architecture).
     Usage:
         imu, fake = make_imu(samples=[(x,y,ω), ...], iir_params=..., ctrl_params=...)
     """

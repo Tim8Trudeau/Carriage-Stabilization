@@ -1,14 +1,14 @@
+
 """
 Orchestrates the Fuzzy Logic Controller (FLC) operations.
 
 This module integrates the Fuzzifier, Rule Engine, and Defuzzifier to process
 sensor inputs and compute a final motor command. It serves as the main
-interface to the FLC system. It does not instanciate hardware.imu_driver or
+interface to the FLC system. It does not instantiate hardware.imu_driver or
 hardware.pwm_driver.
 """
 
 import logging
-import tomllib
 from typing import Dict, Any
 
 from flc.fuzzifier import Fuzzifier
@@ -39,93 +39,41 @@ class FLCController:
             config (Dict[str, Any]): The full configuration dictionary, which
                 contains parameters for all sub-modules.
         """
-        rule_scalcing = config.get("flc_scaling", {})
+        rule_scaling = config.get("flc_scaling", {})
         mf_params = config.get("membership_functions", {})
         rule_base = config.get("rule_base", [])
 
         self.fuzzifier = Fuzzifier(mf_params)
-        self.rule_engine = RuleEngine(rule_base, rule_scalcing)
+        self.rule_engine = RuleEngine(rule_base, rule_scaling)
         self.defuzzifier = Defuzzifier()
         controller_log.info("FLC Controller initialized and ready.")
 
-    def calculate_motor_cmd(
-        self, theta: float, omega: float, plot: bool = False
-    ) -> float:
+    def calculate_motor_cmd(self, theta: float, omega: float, plot: bool = False) -> float:
         """
         Executes one full cycle of the fuzzy inference system.
 
         Args:
-            theta (float): The angular position error in radians [-1.57, +1.57].
-            omega (float): The "normalized" angular velocity error [-1.0, +1.0].
+            theta (float): The angular position error in radians (normalized to controller range).
+            omega (float): The normalized angular velocity error [-1.0, +1.0].
+            plot (bool): Optional passthrough for debugging visuals inside the rule engine.
 
         Returns:
             float: The calculated normalized motor command, in the range [-1.0, 1.0].
         """
         controller_log.debug(
-            "--- FLC Cycle Start (theta=  %.3f, omega=  %.3f) ---", theta, omega
+            "--- FLC Cycle Start (theta= %.3f, omega= %.3f) ---", theta, omega
         )
 
-        # 1. Fuzzification - Range for theta is [-1.5, +1.5] and omega is [-1.0, +1.0]
+        # 1) Fuzzification
         fuzzified_theta = self.fuzzifier.fuzzify("theta", theta)
         fuzzified_omega = self.fuzzifier.fuzzify("omega", omega)
 
-        # 2. Rule Evaluation
+        # 2) Rule Evaluation
         rule_outputs = self.rule_engine.evaluate(
             fuzzified_theta, fuzzified_omega, theta, omega, plot=plot
         )
 
-        # 3. Defuzzification
+        # 3) Defuzzification
         motor_cmd = self.defuzzifier.defuzzify(rule_outputs)
-        # print(f"motor_cmd=  {motor_cmd:.4f} ")
-        controller_log.debug("--- FLC Cycle End (motor_cmd=  %.4f) ---", motor_cmd)
-        # print(f"--- FLC Cycle End (motor_cmd= {motor_cmd:.4f}) ---")
+        controller_log.debug("--- FLC Cycle End (motor_cmd= %.4f) ---", motor_cmd)
         return motor_cmd
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-import logging
-from utils.logger import setup_logging
-
-
-def plot_motor_cmd_vs_theta(controller, theta_range=(-1.5, 1.5), omega=0.0, num=200):
-    """
-    Sweeps theta across the specified range with fixed omega,
-    calls controller.calculate_motor_cmd, and plots motor_cmd vs theta
-    (theta on vertical axis).
-    """
-    thetas = np.linspace(theta_range[0], theta_range[1], num)
-    motor_cmds = []
-    for theta in thetas:
-        cmd = controller.calculate_motor_cmd(theta, omega)
-        motor_cmds.append(cmd)
-
-    plt.figure(figsize=(8, 6))
-    plt.plot(thetas, motor_cmds, color="blue")
-    plt.xlabel("Theta")
-    plt.ylabel("Motor Command")
-    plt.title("Motor Command vs Theta (Omega = 0.0)")
-
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-
-# Example usage:
-if __name__ == "__main__":
-    import tomllib
-    import os
-
-    # Setup logging first
-    setup_logging()
-    main_log = logging.getLogger("main")
-    # Load TOML config
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, "..", "config", "flc_config.toml")
-    config_path = os.path.normpath(config_path)
-
-    with open(config_path, "rb") as f:
-        config = tomllib.load(f)
-
-    controller = FLCController(config)
-    plot_motor_cmd_vs_theta(controller)

@@ -3,7 +3,8 @@ import math
 import logging
 from typing import Tuple
 
-from hardware.LSM6DS3TR_driver import LSM6DS3TRDriver
+# Switched to I2C-backed device driver
+from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver
 
 imu_log = logging.getLogger("imu")
 
@@ -30,6 +31,7 @@ class IMU_Driver:
     """
     Reads 6 bytes from the IMU:
         [AX_L, AX_H, AY_L, AY_H, GZ_L, GZ_H]  (all int16 LE)
+
     Processing:
         - Soft clamp accel (tanh) then LP filter (pre-atan2)
         - theta_rads = atan2(ax_lp, ay_lp) → normalize by THETA_RANGE_RAD
@@ -41,7 +43,7 @@ class IMU_Driver:
         self.controller_params = dict(controller_params) if controller_params else {}
         self.iir_params = dict(iir_params) if iir_params else {}
 
-        # Device driver (it owns the bus)
+        # Device driver (it owns the I2C bus)
         self._dev = LSM6DS3TRDriver(controller_params=self.controller_params)
         self._get6 = self._dev.read_ax_ay_gz_bytes
 

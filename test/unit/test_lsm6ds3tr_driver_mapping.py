@@ -1,7 +1,7 @@
 # test/unit/test_lsm6ds3tr_driver_mapping.py
 import pytest
 
-# Registers we care about (match driver)
+# Registers we care about (match I2C driver)
 CTRL3_C    = 0x12
 STATUS_REG = 0x1E
 OUTX_L_G   = 0x22
@@ -12,64 +12,49 @@ GDA  = 0x02
 
 class FakePiHost:
     """
-    Minimal pigpio.pi()-like shim:
-      - spi_open / spi_close / spi_xfer
-      - STATUS_REG returns XLDA|GDA
-      - OUTX_L_G block read returns a supplied 12-byte block
-      - CTRL3_C writes are captured (to confirm BDU set)
+    Minimal pigpio.pi()-like shim for I2C:
+      - i2c_open / i2c_close / stop
+      - i2c_read_byte_data(STATUS_REG) returns XLDA|GDA
+      - i2c_read_i2c_block_data(OUTX_L_G, 12) returns a supplied 12-byte block
+      - i2c_write_byte_data captures CTRL3_C writes (BDU/IF_INC set)
     """
     def __init__(self, *, block12: bytes, ctrl3c_init=0x00):
         assert len(block12) == 12
-        self._open = False
-        self._h = 1
+        self._handles = {}
+        self._next_h = 1
         self._ctrl3c = ctrl3c_init
         self._writes = []
         self._block12 = block12
 
-    def spi_open(self, channel: int, baud: int, flags: int):
-        self._open = True
-        return self._h
+    def i2c_open(self, bus: int, addr: int, flags: int = 0):
+        h = self._next_h
+        self._next_h += 1
+        self._handles[h] = (bus, addr, flags)
+        return h
 
-    def spi_close(self, handle: int):
-        self._open = False
+    def i2c_close(self, handle: int):
+        self._handles.pop(handle, None)
 
     def stop(self):
-        self._open = False
+        self._handles.clear()
 
-    def spi_xfer(self, handle: int, tx: bytes):
-        if not self._open:
-            raise RuntimeError("SPI not open")
-        if not tx:
-            return 0, b""
+    def i2c_read_byte_data(self, handle: int, reg: int) -> int:
+        if reg == STATUS_REG:
+            return XLDA | GDA
+        if reg == CTRL3_C:
+            return self._ctrl3c & 0xFF
+        return 0
 
-        addr_raw = tx[0]
-        is_read  = bool(addr_raw & 0x80)     # bit7
-        auto_inc = bool(addr_raw & 0x40)     # bit6
-        # For LSM6 series, bit6 is the autoinc flag, not part of the register
-        reg      = (addr_raw & 0x3F) if auto_inc else (addr_raw & 0x7F)
-        trailing = len(tx) - 1                # bytes requested on read
+    def i2c_read_i2c_block_data(self, handle: int, reg: int, count: int):
+        if reg == OUTX_L_G and count >= 12:
+            return self._block12[:count] if count < 12 else self._block12
+        return bytes([0] * count)
 
-        if is_read:
-            if reg == STATUS_REG and trailing >= 1:
-                rx = bytes([0x00, XLDA | GDA])  # dummy + ready
-                return len(rx), rx[: 1 + trailing]
-            if reg == OUTX_L_G and auto_inc and trailing >= 1:
-                rx = bytes([0x00]) + self._block12  # dummy + 12 bytes
-                return len(rx), rx[: 1 + trailing]
-            rx = bytes([0x00]) + (b"\x00" * trailing)
-            return len(rx), rx
-
-        # WRITE path (capture CTRL3_C to verify BDU set)
-        payload = tx[1:]
-        if payload:
-            if auto_inc:
-                for i, b in enumerate(payload):
-                    self._writes.append(((reg + i) & 0xFF, b))
-            else:
-                self._writes.append((reg, payload[0]))
-                if reg == CTRL3_C:
-                    self._ctrl3c = payload[0]
-        return len(tx), tx
+    def i2c_write_byte_data(self, handle: int, reg: int, val: int):
+        self._writes.append((reg & 0xFF, val & 0xFF))
+        if reg == CTRL3_C:
+            self._ctrl3c = val & 0xFF
+        return 0
 
 
 def test_read_ax_ay_gz_bytes_maps_expected_order(monkeypatch):
@@ -85,14 +70,14 @@ def test_read_ax_ay_gz_bytes_maps_expected_order(monkeypatch):
     ])
 
     # Driver should return [AX_L,AX_H, AY_L,AY_H, GZ_L,GZ_H]
-    import hardware.spi_driver as spi_drv
+    import hardware.i2c_driver as i2c_drv
     monkeypatch.setattr(
-        spi_drv, "get_spi_host",
+        i2c_drv, "get_i2c_host",
         lambda _params=None: FakePiHost(block12=block12),
         raising=True,
     )
 
-    from hardware.LSM6DS3TR_driver import LSM6DS3TRDriver
+    from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver
     dev = LSM6DS3TRDriver(controller_params={})
     try:
         six = dev.read_ax_ay_gz_bytes()
@@ -102,17 +87,18 @@ def test_read_ax_ay_gz_bytes_maps_expected_order(monkeypatch):
     assert six == bytes([0x41, 0x42, 0x51, 0x52, 0x31, 0x32])
 
 
-def test_driver_sets_bdu_once(monkeypatch):
-    # Start with BDU clear (0x00); verify write to CTRL3_C sets bit6
+def test_driver_sets_bdu_and_ifinc(monkeypatch):
+    # Start with BDU/IF_INC clear (0x00); verify write to CTRL3_C sets both bits
     block12 = bytes([0] * 12)
     host = FakePiHost(block12=block12, ctrl3c_init=0x00)
 
-    import hardware.spi_driver as spi_drv
-    monkeypatch.setattr(spi_drv, "get_spi_host", lambda _p=None: host, raising=True)
+    import hardware.i2c_driver as i2c_drv
+    monkeypatch.setattr(i2c_drv, "get_i2c_host", lambda _p=None: host, raising=True)
 
-    from hardware.LSM6DS3TR_driver import LSM6DS3TRDriver
+    from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver
     dev = LSM6DS3TRDriver(controller_params={})
     dev.close()
 
-    assert any(reg == CTRL3_C and (val & 0x40) for reg, val in host._writes), \
-        f"Expected BDU bit set in CTRL3_C write, got {host._writes}"
+    # BDU (bit6) and IF_INC (bit2) should be set at some point
+    wrote = dict(host._writes)
+    assert CTRL3_C in wrote and (wrote[CTRL3_C] & 0x44) == 0x44, f"CTRL3_C writes: {host._writes}"
