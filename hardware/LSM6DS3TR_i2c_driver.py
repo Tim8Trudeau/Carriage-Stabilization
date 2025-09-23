@@ -39,14 +39,43 @@ class LSM6DS3TRDriver:
         if want != cur:
             self.write(CTRL3_C, bytes([want]))
 
+    # --- internal: normalize pigpio/mock block reads to bytes of length n ---
+    def _read_block(self, reg: int, n: int) -> bytes:
+        ret = self._pi.i2c_read_i2c_block_data(self._h, reg & 0xFF, int(n))
+
+        def _to_bytes_any(obj) -> bytes:
+            # Fast paths
+            if isinstance(obj, (bytes, bytearray, memoryview)):
+                return bytes(obj)
+            # Some pigpio builds or wrappers may hand back array('B') or lists/tuples
+            try:
+                return bytes(bytearray(int(x) & 0xFF for x in obj))
+            except Exception:
+                # Last resort: if it's a str (shouldn't happen, but be robust)
+                if isinstance(obj, str):
+                    # Treat as raw 8-bit data; latin-1 preserves byte values 0..255
+                    return obj.encode("latin-1", errors="ignore")
+                # Give up—empty bytes
+                return b""
+
+        # pigpio returns (count, data); mock returns bytes/bytearray
+        if isinstance(ret, tuple) and len(ret) == 2:
+            count, data = ret
+            data_b = _to_bytes_any(data)[: int(count)]
+        else:
+            data_b = _to_bytes_any(ret)
+
+        if len(data_b) < n:
+            raise RuntimeError(f"short read from 0x{reg:02X}: got {len(data_b)} < {n}")
+        return data_b[:n]
+
     # --- reg helpers ---
     def readfrom_into(self, reg: int, buf: bytearray) -> None:
         n = len(buf)
-        data = self._pi.i2c_read_i2c_block_data(self._h, reg & 0xFF, n)
-        buf[:n] = memoryview(data)[:n]
+        buf[:n] = memoryview(self._read_block(reg, n))[:n]
 
     def read(self, reg: int, nbytes: int) -> bytes:
-        return bytes(self._pi.i2c_read_i2c_block_data(self._h, reg & 0xFF, int(nbytes)))
+        return self._read_block(reg, int(nbytes))
 
     def write(self, reg: int, data: bytes | bytearray | Iterable[int]) -> None:
         payload = bytes(data)
@@ -61,12 +90,11 @@ class LSM6DS3TRDriver:
         deadline = time.perf_counter() + timeout_s
         while True:
             status = self._pi.i2c_read_byte_data(self._h, STATUS_REG) & 0xFF
-            if (status & (_STATUS_XLDA | _STATUS_GDA)) == (_STATUS_XLDA | _STATUS_GDA): break
+            if (status & (_STATUS_XLDA | _STATUS_GDA)) == (_STATUS_XLDA | _STATUS_GDA):
+                break
             if time.perf_counter() >= deadline:
                 raise RuntimeError(f"data not ready (STATUS=0x{status:02X})")
-        block = self.read(OUTX_L_G, 12)
-        if len(block) != 12:
-            raise RuntimeError(f"short read ({len(block)} bytes)")
+        block = self._read_block(OUTX_L_G, 12)
         # [GX][GY][GZ][AX][AY][AZ] → return [AX, AY, GZ] (each 16-bit LE)
         return bytes([block[6], block[7], block[8], block[9], block[4], block[5]])
 

@@ -1,165 +1,101 @@
-# !/usr/bin/env python3
+# ---- Add this to hardware/LSM6DS3TR_i2c_driver.py (inside class LSM6DS3TRDriver) ----
 
-# LSM6DS3 3D Accelerometer and 3D Gyroscope
-# https://www.st.com/en/mems-and-sensors/lsm6ds3.html
+# Register addresses (reuse any you already defined at top of file)
+WHO_AM_I    = 0x0F
+CTRL1_XL    = 0x10
+CTRL2_G     = 0x11
+CTRL3_C     = 0x12
+CTRL4_C     = 0x13
+CTRL6_C     = 0x15
+CTRL7_G     = 0x16
+CTRL8_XL    = 0x17
+CTRL9_XL    = 0x18
+CTRL10_C    = 0x19
+MASTER_CONFIG = 0x1A  # sensor hub/master (disable)
+INT1_CTRL   = 0x0D
+INT2_CTRL   = 0x0E
+FIFO_CTRL1  = 0x06
+FIFO_CTRL2  = 0x07
+FIFO_CTRL3  = 0x08
+FIFO_CTRL4  = 0x09
+FIFO_CTRL5  = 0x0A
 
-__version__ = '0.0.2'
+def _rmw(self, reg: int, *, set_bits: int = 0, clr_bits: int = 0) -> None:
+    """Read-modify-write helper."""
+    cur = self.read(reg, 1)[0]
+    val = (cur | (set_bits & 0xFF)) & (~clr_bits & 0xFF)
+    if val != cur:
+        self.write(reg, bytes([val]))
 
-# Registers
-WHO_AM_I = 0x0F
-CTRL2_G = 0x11
-CTRL1_XL = 0x10
-CTRL10_C = 0x19
-CTRL3_C = 0x12
+def init_low_power_52hz(self) -> None:
+    """
+    Configure LSM6DS3TR-C for:
+      - ODR 52 Hz accel/gyro (low-power bucket)
+      - FS_XL ±2g, FS_G ±245/250 dps
+      - Block Data Update (BDU), auto-increment (IF_INC), little-endian
+      - No interrupts, FIFO bypass, gyro sleep disabled
+      - Gyro LPF1 = ODR/2, no LPF2/HPF/slope on accel
+      - No pedometer/tilt/tap/sensor-hub features
+    """
+    # ---------------- Sanity ----------------
+    who = self.read(WHO_AM_I, 1)[0]
+    if who != 0x69:
+        _log.warning("LSM6DS3TR WHO_AM_I=0x%02X (expected 0x69) — continuing", who)
 
-# This is the start of the data registers for the Gyro and Accelerometer
-# There are 12 Bytes in total starting at 0x23 and ending at 0x2D
-OUTX_L_G = 0x22
+    # ---------------- Basic interface / endianness / sync ----------------
+    # CTRL3_C bits: BDU=bit6, IF_INC=bit2, BLE=bit1 (0=little), SIM=bit0 (SPI 3-wire; keep 0)
+    self._rmw(CTRL3_C, set_bits=(1<<6) | (1<<2), clr_bits=(1<<1) | (1<<0))
 
-STEP_COUNTER_L = 0x4B
-STEP_COUNTER_H = 0x4C
-TAP_SRC = 0x1C
-TAP_CFG = 0x58
-FUNC_SRC1 = 0x53
-FUNC_SRC2 = 0x54
-TAP_THS_6D = 0x59
-FREE_FALL = 0x5D
-WAKE_UP_THS = 0x5B
-WAKE_UP_SRC = 0x1B
-INT_DUR2 = 0x5A
+    # Ensure I2C enabled and gyro sleep disabled (CTRL4_C: I2C_DISABLE=bit2, SLEEP_G=bit6)
+    self._rmw(CTRL4_C, clr_bits=(1<<2) | (1<<6))
 
-# CONFIG DATA
-NORMAL_MODE_104HZ = 0x40
-NORMAL_MODE_208HZ = 0x50
-PERFORMANCE_MODE_416HZ = 0x60
-LOW_POWER_26HZ = 0x02
-SET_FUNC_EN = 0xBD
-RESET_STEPS = 0x02
-TAP_EN_XYZ = 0x8E
-TAP_THRESHOLD = 0x02
-DOUBLE_TAP_EN = 0x80
-DOUBLE_TAP_DUR = 0x20
+    # ---------------- Output Data Rates / Full-scales ----------------
+    # ODR code for 52 Hz is 0b0011 in [7:4] → 0x30.
+    ODR_52 = 0x30
 
+    # CTRL1_XL: ODR_XL[7:4] | FS_XL[3:2]=00 (±2g) | BW_XL[1:0] choose ODR/2 AA bandwidth (01)
+    FS_XL_2G = 0x00
+    BW_XL_ODR_DIV_2 = 0x01
+    self.write(CTRL1_XL, bytes([ODR_52 | (FS_XL_2G << 2) | BW_XL_ODR_DIV_2]))
 
-def twos_comp(val, bits=16):
-    mask = 1 << (bits - 1)
+    # CTRL2_G: ODR_G[7:4] | FS_G[3:2]=00 (±245 dps)
+    FS_G_245DPS = 0x00
+    self.write(CTRL2_G, bytes([ODR_52 | (FS_G_245DPS << 2)]))
 
-    if val & mask:
-        val &= ~mask
-        val -= mask
+    # ---------------- Filters ----------------
+    # Gyro LPF1 cutoff via CTRL6_C.FTYPE[2:0]. 0b000 ≈ ODR/2.
+    self._rmw(CTRL6_C, set_bits=0x00, clr_bits=0x07)   # clear FT bits → ODR/2
 
-    return val
+    # Disable gyro HPF (CTRL7_G: HP_EN_G=bit6 → 0)
+    self._rmw(CTRL7_G, clr_bits=(1<<6))
 
+    # Accel: disable LPF2 + HP/slope (CTRL8_XL: LPF2_XL_EN=bit7, HP_SLOPE_XL_EN=bit2)
+    self._rmw(CTRL8_XL, clr_bits=(1<<7) | (1<<2))
 
-class LSM6DS3:
-    def __init__(self, i2c=None, address=0x6A, mode=NORMAL_MODE_104HZ):
-        self.bus = i2c
+    # Leave CTRL9_XL as default (no soft resets here)
 
-        if self.bus is None:
-            import smbus2
-            self.bus = smbus2.SMBus(1)
+    # ---------------- Interrupts off ----------------
+    self.write(INT1_CTRL, b"\x00")
+    self.write(INT2_CTRL, b"\x00")
 
-        self.address = address
-        self.mode = mode
+    # ---------------- FIFO bypass ----------------
+    # FIFO_CTRL5: FIFO_MODE[2:0]=000 (bypass), ODR selection cleared
+    self.write(FIFO_CTRL1, b"\x00")
+    self.write(FIFO_CTRL2, b"\x00")
+    self.write(FIFO_CTRL3, b"\x00")
+    self.write(FIFO_CTRL4, b"\x00")
+    self.write(FIFO_CTRL5, b"\x00")
 
-        # Set gyro mode/enable
-        self.bus.write_byte_data(self.address, CTRL2_G, self.mode)
+    # ---------------- Disable sensor-hub / fancy functions ----------------
+    # MASTER_CONFIG (sensor hub) off
+    try:
+        self.write(MASTER_CONFIG, b"\x00")
+    except Exception:
+        pass  # Some variants alias/omit this; safe to ignore.
 
-        # Set accel mode/enable
-        self.bus.write_byte_data(self.address, CTRL1_XL, self.mode)
+    # CTRL10_C hosts embedded function enables on some variants — clear them.
+    # (No wrist tilt, pedometer, step, tap, timestamp, etc.)
+    self.write(CTRL10_C, b"\x00")
 
-        # Send the reset bit to clear the pedometer step count
-        self.bus.write_byte_data(self.address, CTRL10_C, RESET_STEPS)
-
-        # Enable sensor functions (Tap, Tilt, Significant Motion)
-        self.bus.write_byte_data(self.address, CTRL10_C, SET_FUNC_EN)
-
-        # Enable X Y Z Tap Detection
-        self.bus.write_byte_data(self.address, TAP_CFG, TAP_EN_XYZ)
-
-        # Enable Double tap
-        self.bus.write_byte_data(self.address, WAKE_UP_THS, DOUBLE_TAP_EN)
-
-        # Set tap threshold
-        self.bus.write_byte_data(self.address, TAP_THS_6D, TAP_THRESHOLD)
-
-        # Set double tap max time gap
-        self.bus.write_byte_data(self.address, INT_DUR2, DOUBLE_TAP_DUR)
-
-    def _read_reg(self, reg, size):
-        return self.bus.read_i2c_block_data(self.address, reg, size)
-
-    def get_readings(self):
-
-        # Read 12 bytes starting from 0x22. This covers the XYZ data for gyro and accel
-        data = self._read_reg(OUTX_L_G, 12)
-
-        gx = (data[1] << 8) | data[0]
-        gx = twos_comp(gx)
-
-        gy = (data[3] << 8) | data[2]
-        gy = twos_comp(gy)
-
-        gz = (data[5] << 8) | data[4]
-        gz = twos_comp(gz)
-
-        ax = (data[7] << 8) | data[6]
-        ax = twos_comp(ax)
-
-        ay = (data[9] << 8) | data[8]
-        ay = twos_comp(ay)
-
-        az = (data[11] << 8) | data[10]
-        az = twos_comp(az)
-
-        return ax, ay, az, gx, gy, gz
-
-    def get_step_count(self):
-
-        data = self._read_reg(STEP_COUNTER_L, 2)
-        steps = (data[1] << 8) | data[0]
-        steps = twos_comp(steps)
-
-        return steps
-
-    def reset_step_count(self):
-
-        # Send the reset bit
-        self.bus.write_byte_data(self.address, CTRL10_C, RESET_STEPS)
-        # Enable functions again
-        self.bus.write_byte_data(self.address, CTRL10_C, SET_FUNC_EN)
-
-    def tilt_detected(self):
-
-        tilt = self._read_reg(FUNC_SRC1, 1)
-        tilt = (tilt[0] >> 5) & 0b1
-
-        return tilt
-
-    def sig_motion_detected(self):
-
-        sig = self._read_reg(FUNC_SRC1, 1)
-        sig = (sig[0] >> 6) & 0b1
-
-        return sig
-
-    def single_tap_detected(self):
-
-        s = self._read_reg(TAP_SRC, 1)
-        s = (s[0] >> 5) & 0b1
-
-        return s
-
-    def double_tap_detected(self):
-
-        d = self._read_reg(TAP_SRC, 1)
-        d = (d[0] >> 4) & 0b1
-
-        return d
-
-    def freefall_detected(self):
-
-        fall = self._read_reg(WAKE_UP_SRC, 1)
-        fall = fall[0] >> 5
-
-        return fall
+    _log.info("LSM6DS3TR configured: 52Hz, ±2g, ±245dps, BDU+IF_INC, little-endian, "
+              "gyro LPF1 ODR/2, no LPF2/HPF/slope, FIFO bypass, no interrupts.")
