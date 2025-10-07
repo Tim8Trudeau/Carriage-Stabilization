@@ -31,8 +31,7 @@
 |   +-- i2c_driver.py
 |   +-- imu_driver.py
 |   +-- LSM6DS3TR_i2c_driver.py
-|   +-- pwm_driver.py
-|   \-- spi_driver.py
+|   \-- pwm_driver.py
 +-- [logs]
 |   +-- controller.log
 |   +-- defuzzifier.log
@@ -89,12 +88,15 @@
 +-- [utils]
 |   +-- __init__.py
 |   +-- Capture.JPG
+|   +-- imu_watch.py
 |   +-- logger.py
 |   +-- motor_control.py
 |   +-- plot_membership_shapes.py
 |   +-- plot_simulation.py
 |   +-- profiler.py
 |   +-- rule_trace.py
+|   +-- spi_loopback.py
+|   +-- whoami.py
 |   \-- whoami_i2c.py
 +-- .gitignore
 +-- Carriage Stabilization.code-workspace
