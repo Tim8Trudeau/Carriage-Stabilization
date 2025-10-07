@@ -95,8 +95,10 @@ class LSM6DS3TRDriver:
             if time.perf_counter() >= deadline:
                 raise RuntimeError(f"data not ready (STATUS=0x{status:02X})")
         block = self._read_block(OUTX_L_G, 12)
+        # Coordinate remap: AX->AZ AY->AY GZ->GX
         # [GX][GY][GZ][AX][AY][AZ] → return [AX, AY, GZ] (each 16-bit LE)
-        return bytes([block[6], block[7], block[8], block[9], block[4], block[5]])
+        # return bytes([block[6], block[7], block[8], block[9], block[4], block[5]])
+        return bytes([block[10], block[11], block[8], block[9], block[0], block[1]])
 
     # --- lifecycle ---
     def close(self) -> None:
