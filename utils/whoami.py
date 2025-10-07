@@ -1,25 +1,43 @@
 #!/usr/bin/env python3
-import pigpio, sys, time
+import sys
+import time
+import pigpio
 
-WHO_AM_I = 0x0F
-CTRL3_C  = 0x12
+SPI_CHANNEL = 0        # 0 -> CE0, 1 -> CE1
+SPI_BAUD    = 100_000
+SPI_MODE    = 0        # CPOL=0, CPHA=0 (adjust if your device needs 1/2/3)
 
-def rreg(pi, h, addr):
-    tx = bytes([addr | 0x80, 0x00])  # READ bit set, dummy
-    n, rx = pi.spi_xfer(h, tx)
-    return rx[1] if n == 2 else None
+REG_ADDR    = 0x0F     # register to read (WHO_AM_I on many IMUs)
+READ_BIT    = 0x80     # many SPI devices use MSB=1 for read
 
-def try_combo(ch, mode):
+def main():
     pi = pigpio.pi()
     if not pi.connected:
-        print("pigpio not running (sudo pigpiod).", file=sys.stderr)
+        print("pigpio daemon not running. Start it with: sudo pigpiod", file=sys.stderr)
         sys.exit(1)
+
     try:
-        h = pi.spi_open(ch, 100_000, mode)  # ch: 0=>CE0, 1=>CE1
-        time.sleep(0.001)
-        who = rreg(pi, h, WHO_AM_I)
-        c3  = rreg(pi, h, CTRL3_C)
-        print(f"CE{ch}, mode {mode}: WHO_AM_I=0x{who:02X}  CTRL3_C=0x{c3:02X}")
+        # Open SPI
+        h = pi.spi_open(SPI_CHANNEL, SPI_BAUD, SPI_MODE)
+
+        # Many devices expect the read bit set in the address.
+        addr_byte = REG_ADDR | READ_BIT
+
+        # Write just the address first…
+        # (Some chips also need a dummy byte in the same CS frame, but we're
+        # restricted to spi_write/spi_read, so we do two calls.)
+        pi.spi_write(h, bytes(REG_ADDR))
+
+ 
+        # …then read back one byte.
+        count, data = pi.spi_read(h, 1)
+        if count != 1:
+            print(f"SPI read failed (count={count})", file=sys.stderr)
+            sys.exit(2)
+
+        value = data[0]
+        print(f"Reg 0x{REG_ADDR:02X} = 0x{value:02X} ({value})")
+
     finally:
         try:
             pi.spi_close(h)
@@ -28,6 +46,4 @@ def try_combo(ch, mode):
         pi.stop()
 
 if __name__ == "__main__":
-    for ch in (0, 1):
-        for mode in (0, 3):
-            try_combo(ch, mode)
+    main()

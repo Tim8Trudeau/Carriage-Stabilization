@@ -13,8 +13,8 @@ import time
 import pigpio
 
 PATTERNS = [
-    bytes([0x00]),
-    bytes([0xFF]),
+    bytes([0x55]),
+    bytes([0xAA]),
     bytes([0xAA, 0x55, 0xF0, 0x0F]),
     bytes(range(16)),
 ]

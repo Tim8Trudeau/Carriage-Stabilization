@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Manual PWM drive for Raspberry Pi using the project's DualPWMController.
+Auto-sweep PWM for Raspberry Pi using DualPWMController.
 
-Keys:
-  q -> increase command by +step (default +0.1)
-  z -> decrease command by -step (default -0.1)
-  0 -> stop (command = 0.0)
-  x -> exit
+Behavior:
+  Starts at 0.0, increments by +step every second up to +1.0,
+  then decrements by -step every second down to -1.0,
+  and repeats forever.
 
 Flags:
-  --step <float>   Per-keypress delta (0 < step <= 1). Default: 0.1
+  --step <float>   Step size per second (0 < step <= 1). Default: 0.10
   --freq <int>     PWM frequency in Hz. Default: 200
 """
 
@@ -17,15 +16,14 @@ import os
 import sys
 import time
 import signal
-import select
 import subprocess
 import logging
 import argparse
 
 from utils.logger import setup_logging
-from hardware.pwm_driver import DualPWMController  # GPIO12/13, default 200 Hz
+from hardware.pwm_driver import DualPWMController  # uses GPIO 12/13, default 200 Hz
 
-LOG = logging.getLogger("pwm_manual")
+LOG = logging.getLogger("pwm_auto_sweep")
 
 
 def _pigpiod_running() -> bool:
@@ -37,65 +35,23 @@ def _pigpiod_running() -> bool:
 
 
 def _start_pigpiod():
+    if os.name == "nt":
+        LOG.info("Windows run: skipping pigpiod; mock pigpio will be used if available.")
+        return
     if _pigpiod_running():
         LOG.info("pigpio daemon already running.")
-        print("pigpio daemon already running.")
         return
     LOG.info("Starting pigpio daemon (pigpiod)…")
-    print("Starting pigpio daemon (pigpiod)…")
-    # Try a few common commands to start pigpiod:
     for cmd in (["sudo", "pigpiod"], ["pigpiod"], ["sudo", "systemctl", "start", "pigpiod"]):
-        LOG.info("pigpio daemon cmd %s", cmd)
-        print("pigpio daemon cmd %s", cmd)
         try:
             subprocess.run(cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(0.3)
             if _pigpiod_running():
                 LOG.info("pigpio daemon is running.")
-                print("pigpio daemon is running.")
                 return
         except Exception:
             pass
     raise RuntimeError("Failed to start pigpio daemon. Try `sudo pigpiod` then re-run.")
-
-
-# --- POSIX raw-tty helper (define first) -------------------------------------
-class _RawTTY:
-    """Put stdin into cbreak mode so single keypresses are read without Enter."""
-    def __enter__(self):
-        print("Entering raw TTY mode (press 'x' to exit)…")
-        import termios, tty  # imported only on POSIX
-        self._termios = termios
-        self._fd = sys.stdin.fileno()
-        self._old = termios.tcgetattr(self._fd)
-        tty.setcbreak(self._fd)
-        return self
-
-    def __exit__(self, *exc):
-        self._termios.tcsetattr(self._fd, self._termios.TCSADRAIN, self._old)
-
-    def read_key(self, timeout: float = 0.25):
-        r, _, _ = select.select([sys.stdin], [], [], timeout)
-        return sys.stdin.read(1) if r else None
-
-
-# --- Cross-platform shim -----------------------------------------------------
-if os.name != "nt":
-    # On Linux/Pi/macOS: use the POSIX helper directly
-    KeyReader = _RawTTY
-else:
-    # On Windows: compatible minimal reader using msvcrt
-    import msvcrt
-    class KeyReader:
-        def __enter__(self): return self
-        def __exit__(self, *exc): pass
-        def read_key(self, timeout: float = 0.25):
-            end = time.time() + timeout
-            while time.time() < end:
-                if msvcrt.kbhit():
-                    return msvcrt.getwch()
-                time.sleep(0.01)
-            return None
 
 
 def _clamp(x: float, lo: float, hi: float) -> float:
@@ -104,69 +60,49 @@ def _clamp(x: float, lo: float, hi: float) -> float:
 
 def main():
     setup_logging()
-
-    # ---------- parse flags ----------
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", type=float, default=0.1, help="per-press delta (0<step<=1); default 0.1")
+    ap.add_argument("--step", type=float, default=0.10, help="step size each second (0<step<=1); default 0.10")
     ap.add_argument("--freq", type=int, default=200, help="PWM frequency in Hz; default 200")
     args = ap.parse_args()
 
     step = args.step
     if not (0.0 < step <= 1.0):
-        LOG.warning("Invalid --step %.3f; clamping to 0.1", step)
-        step = 0.1
-
+        LOG.warning("Invalid --step %.3f; clamping to 0.10", step)
+        step = 0.10
     freq = int(args.freq) if args.freq and args.freq > 0 else 200
 
-    # Only start pigpio daemon on Linux (Windows uses mock)
-    if os.name != "nt":
-        _start_pigpiod()
-    else:
-        LOG.info("Windows run: skipping pigpiod; mock pigpio will be used if available.")
+    _start_pigpiod()
 
-    # NOTE: GPIO pins are handled inside DualPWMController (now using 12/13)
     ctrl = DualPWMController(frequency=freq)  # set_speed expects [-1.0, +1.0]
     speed = 0.0
+    direction = +1  # +1 going up to +1.0, -1 going down to -1.0
     ctrl.set_speed(speed)
-    LOG.info(
-        "Ready. q:+%.2f, z:-%.2f, 0:stop, x:exit | step=%.2f freq=%d Hz | speed=%.2f",
-        step, step, step, freq, speed
-    )
+    LOG.info("Auto sweep started: step=%.2f, freq=%d Hz", step, freq)
 
     def graceful_exit(_sig=None, _frm=None):
         LOG.info("Exiting… stopping PWM.")
         try:
             ctrl.stop()
         finally:
-            pass
-        sys.exit(0)
+            sys.exit(0)
 
     signal.signal(signal.SIGINT, graceful_exit)
     signal.signal(signal.SIGTERM, graceful_exit)
 
-    with KeyReader() as keys:
-        while True:
-            ch = keys.read_key(0.25)
-            if not ch:
-                continue
+    # Main loop: tick once per second
+    while True:
+        # Advance
+        speed = _clamp(round(speed + direction * step, 3), -1.0, 1.0)
+        ctrl.set_speed(speed)
+        LOG.info("speed=%.2f", speed)
 
-            if ch.lower() == "q":
-                speed = _clamp(round(speed + step, 3), -1.0, 1.0)
-                ctrl.set_speed(speed)
-                LOG.info("speed=%.2f", speed)
+        # Flip direction at endpoints
+        if speed >= 1.0:
+            direction = -1
+        elif speed <= -1.0:
+            direction = +1
 
-            elif ch.lower() == "z":
-                speed = _clamp(round(speed - step, 3), -1.0, 1.0)
-                ctrl.set_speed(speed)
-                LOG.info("speed=%.2f", speed)
-
-            elif ch == "0":
-                speed = 0.0
-                ctrl.set_speed(speed)
-                LOG.info("speed=%.2f (STOP)", speed)
-
-            elif ch.lower() == "x":
-                graceful_exit()
+        time.sleep(1.0)
 
 
 if __name__ == "__main__":
