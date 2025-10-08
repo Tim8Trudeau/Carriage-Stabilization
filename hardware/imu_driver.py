@@ -45,7 +45,7 @@ class IMU_Driver:
 
         # Device driver (it owns the I2C bus)
         self._dev = LSM6DS3TRDriver(controller_params=self.controller_params)
-/imu            self._get6 = lambda: self._dev.read_ax_ay_gz_bytes(timeout_s=0.02)        # Normalization ranges
+        self._get6 = lambda: self._dev.read_ax_ay_gz_bytes(timeout_s=0.02)        # Normalization ranges
         self.theta_range_rad = float(self.controller_params.get("THETA_RANGE_RAD", math.pi))
         self.gyro_full_scale_rps = float(self.controller_params.get("GYRO_FULL_SCALE_RADS_S", 4.363))
 
