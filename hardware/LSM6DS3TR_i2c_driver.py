@@ -86,7 +86,7 @@ class LSM6DS3TRDriver:
                 self._pi.i2c_write_byte_data(self._h, (reg + i) & 0xFF, b)
 
     # --- convenience ---
-    def read_ax_ay_gz_bytes(self, timeout_s: float = 0.005) -> bytes:
+    def read_ax_ay_gz_bytes(self, timeout_s: float = 0.02) -> bytes:
         deadline = time.perf_counter() + timeout_s
         while True:
             status = self._pi.i2c_read_byte_data(self._h, STATUS_REG) & 0xFF

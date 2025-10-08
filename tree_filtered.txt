@@ -5,6 +5,7 @@
 +-- [DOCS]
 |   +-- Block Diagram.odg
 |   +-- Block Diagram.png
+|   +-- BTS7960 Motor Driver.pdf
 |   +-- Capture3.JPG
 |   +-- Capture3.tif
 |   +-- carriage circle chart.png
@@ -88,6 +89,7 @@
 +-- [utils]
 |   +-- __init__.py
 |   +-- Capture.JPG
+|   +-- imu_tail_i2c.py
 |   +-- imu_watch.py
 |   +-- logger.py
 |   +-- motor_control.py
@@ -96,6 +98,7 @@
 |   +-- profiler.py
 |   +-- rule_trace.py
 |   +-- spi_loopback.py
+|   +-- spi_write.py
 |   +-- whoami.py
 |   \-- whoami_i2c.py
 +-- .gitignore

@@ -17,6 +17,18 @@ from hardware.imu_driver import IMU_Driver
 from flc.controller import FLCController
 from hardware.pwm_driver import DualPWMController
 
+# Graceful shutdown on signals
+import signal, threading
+shutdown = threading.Event()
+...
+def _on_signal(signum, _frame):
+    main_log.info("Signal %s received; requesting shutdown...", signum)
+    shutdown.set()
+
+signal.signal(signal.SIGINT, _on_signal)   # Ctrl-C / kill -2
+signal.signal(signal.SIGTERM, _on_signal)  # systemd stop
+signal.signal(signal.SIGQUIT, _on_signal)
+
 # Setup logging first
 setup_logging()
 main_log = logging.getLogger("main")
@@ -68,7 +80,7 @@ def main_control_loop():
     )
 
     try:
-        while True:
+        while not shutdown.is_set():
             loop_start_time = time.perf_counter()
 
             with CodeProfiler("Control Loop"):
@@ -85,14 +97,17 @@ def main_control_loop():
             processing_time = time.perf_counter() - loop_start_time
             sleep_time = loop_period - processing_time
             if sleep_time > 0:
-                time.sleep(sleep_time)
+                # sleep in small chunks so we react quickly to shutdown
+                end = time.perf_counter() + sleep_time
+                while not shutdown.is_set() and time.perf_counter() < end:
+                    time.sleep(0.005)
             else:
-                pass
-                # main_log.warning(
-                #     "Loop overrun: Processing time (%.2fms) exceeded period (%.2fms)",
-                #     processing_time * 1000,
-                #     loop_period * 1000,
-                # )
+                #pass
+                main_log.warning(
+                    "Loop overrun: Processing time (%.2fms) exceeded period (%.2fms)",
+                    processing_time * 1000,
+                    loop_period * 1000,
+                )
 
     except KeyboardInterrupt:
         main_log.info("Keyboard interrupt received. Shutting down.")
@@ -102,10 +117,12 @@ def main_control_loop():
         )
     finally:
         # Ensure the motor is stopped on exit
-        main_log.info("Setting motor speed to 0.")
-        motor.stop()
-        main_log.info("Application finished.")
-
+        main_log.info("Setting motor speed to 0 and shutting down.")
+        try:
+            motor.stop()
+            main_log.info("Application finished.")
+        except Exception:
+            main_log.exception("motor.stop() failed")
 
 if __name__ == "__main__":
     main_control_loop()
