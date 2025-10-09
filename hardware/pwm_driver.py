@@ -47,8 +47,11 @@ class DualPWMController:
         self.freq = frequency
         self.duty_cycle_0 = 0
         self.duty_cycle_1 = 0
-        self.gpio_pwm0 = 12
-        self.gpio_pwm1 = 13
+        # self.gpio_pwm0 = 12
+        # self.gpio_pwm1 = 13
+        self.gpio_pwm0 = 13 # Reverse motor direction
+        self.gpio_pwm1 = 12
+
 
         self.pi = _pigpio.pi()
 
