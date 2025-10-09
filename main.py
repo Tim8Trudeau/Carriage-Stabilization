@@ -7,10 +7,8 @@ runs a continuous control loop at a fixed frequency, orchestrating the flow
 of data from imu_sensor to motor to stabilize the carriage.
 """
 
-import time
+import time, sys, logging
 import tomllib
-import logging
-
 from utils.logger import setup_logging
 from utils.profiler import CodeProfiler
 from hardware.imu_driver import IMU_Driver
@@ -32,6 +30,26 @@ signal.signal(signal.SIGQUIT, _on_signal)
 # Setup logging first
 setup_logging()
 main_log = logging.getLogger("main")
+
+def wait_until_imu_ready(imu_sensor, max_wait_s=10.0):
+    """Poll the IMU until it signals data ready, or timeout."""
+    deadline = time.perf_counter() + max_wait_s
+    tries = 0
+    while time.perf_counter() < deadline:
+        try:
+            # This calls your lambda → _dev.read_ax_ay_gz_bytes(timeout_s=...)
+            _ = imu_sensor._get6()
+            if tries:
+                main_log.info("IMU became ready after %d tries.", tries)
+            return True
+        except RuntimeError as e:
+            # Your I2C driver raises: RuntimeError("data not ready (STATUS=0x00)")
+            if "data not ready" in str(e).lower():
+                tries += 1
+                time.sleep(0.05)  # 50 ms backoff
+                continue
+            raise  # unexpected error → let the outer handler log it
+    return False
 
 
 def main_control_loop():
@@ -78,6 +96,10 @@ def main_control_loop():
         sample_hz,
         loop_period * 1000,
     )
+    # Wait until the IMU is ready (data available) or timeout
+    if not wait_until_imu_ready(imu_sensor, max_wait_s=3.0):
+        main_log.critical("IMU not ready within 3.0 s at boot; exiting for restart.")
+        sys.exit(1)  # non-zero so systemd can retry
 
     try:
         while not shutdown.is_set():
