@@ -15,42 +15,8 @@ from hardware.imu_driver import IMU_Driver
 from flc.controller import FLCController
 from hardware.pwm_driver import DualPWMController
 
-# Graceful shutdown on signals
-import signal, threading
-shutdown = threading.Event()
-...
-def _on_signal(signum, _frame):
-    main_log.info("Signal %s received; requesting shutdown...", signum)
-    shutdown.set()
-
-signal.signal(signal.SIGINT, _on_signal)   # Ctrl-C / kill -2
-signal.signal(signal.SIGTERM, _on_signal)  # systemd stop
-signal.signal(signal.SIGQUIT, _on_signal)
-
-# Setup logging first
-setup_logging()
+# Setup logging
 main_log = logging.getLogger("main")
-
-def wait_until_imu_ready(imu_sensor, max_wait_s=10.0):
-    """Poll the IMU until it signals data ready, or timeout."""
-    deadline = time.perf_counter() + max_wait_s
-    tries = 0
-    while time.perf_counter() < deadline:
-        try:
-            # This calls your lambda → _dev.read_ax_ay_gz_bytes(timeout_s=...)
-            _ = imu_sensor._get6()
-            if tries:
-                main_log.info("IMU became ready after %d tries.", tries)
-            return True
-        except RuntimeError as e:
-            # Your I2C driver raises: RuntimeError("data not ready (STATUS=0x00)")
-            if "data not ready" in str(e).lower():
-                tries += 1
-                time.sleep(0.05)  # 50 ms backoff
-                continue
-            raise  # unexpected error → let the outer handler log it
-    return False
-
 
 def main_control_loop():
     """
@@ -95,14 +61,10 @@ def main_control_loop():
         "Starting control loop at %.1f Hz (%.1f ms period)...",
         sample_hz,
         loop_period * 1000,
-    )
-    # Wait until the IMU is ready (data available) or timeout
-    if not wait_until_imu_ready(imu_sensor, max_wait_s=3.0):
-        main_log.critical("IMU not ready within 3.0 s at boot; exiting for restart.")
-        sys.exit(1)  # non-zero so systemd can retry
+        )
 
     try:
-        while not shutdown.is_set():
+        while True:
             loop_start_time = time.perf_counter()
 
             with CodeProfiler("Control Loop"):
@@ -119,10 +81,8 @@ def main_control_loop():
             processing_time = time.perf_counter() - loop_start_time
             sleep_time = loop_period - processing_time
             if sleep_time > 0:
-                # sleep in small chunks so we react quickly to shutdown
-                end = time.perf_counter() + sleep_time
-                while not shutdown.is_set() and time.perf_counter() < end:
-                    time.sleep(0.005)
+                time.sleep(sleep_time)
+
             else:
                 #pass
                 main_log.warning(
@@ -137,6 +97,7 @@ def main_control_loop():
         main_log.critical(
             "An unhandled exception occurred in the main loop: %s", e, exc_info=True
         )
+        # sysexit(1)  # non-zero so systemd can retry only on Pi
     finally:
         # Ensure the motor is stopped on exit
         main_log.info("Setting motor speed to 0 and shutting down.")
