@@ -91,7 +91,7 @@ class IMU_Driver:
         self._ax_lp += self.alpha_acc * (float(ax_sc) - self._ax_lp)
         self._ay_lp += self.alpha_acc * (float(ay_sc) - self._ay_lp)
 
-        theta_rads = math.atan2(self._ax_lp, self._ay_lp)
+        theta_rads = math.atan2(self._ay_lp, self._ax_lp)
         theta_norm = max(-1.0, min(1.0, theta_rads / self.theta_range_rad))
 
         self._omega_raw_filt += self.alpha_omega * (float(raw_omega) - self._omega_raw_filt)
