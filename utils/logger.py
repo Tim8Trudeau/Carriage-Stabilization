@@ -44,7 +44,7 @@ def setup_logging(
         "simulation",
         "simloop",
         "imu",
-        "spi",
+        "i2c",
         "motor",
         "profiler",
     ]

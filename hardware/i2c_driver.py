@@ -46,6 +46,7 @@ def get_i2c_host(controller_params: Optional[Dict] = None,
         import pigpio  # type: ignore
         pi = pigpio.pi()
         if not pi.connected:
+            _i2c_log.debug("******* pigpio did not start.**********")
             raise RuntimeError("pigpio daemon not running (try: sudo pigpiod)")
         _i2c_log.info("i2c_driver: using pigpio.pi() as I2C host.")
         return pi
@@ -87,25 +88,27 @@ def _make_mock_host(controller_params: Dict, apply_initial_conditions: bool):
             if reg == STATUS_REG: return _XLDA | _GDA
             return int(self._regs.get(reg, 0)) & 0xFF
 
+        # These calls are only for mocking of the i2c bus
         def i2c_read_i2c_block_data(self, handle: int, reg: int, count: int):
             if reg == OUTX_L_G and count >= 12:
-                # Convert 6B [AX,AY,GZ] into 12B device block
+                # six = [AX, AY, GZ] (each 16-bit LE) in logical coordinates
                 six = self._bus.imu_read()
                 ax_l, ax_h, ay_l, ay_h, gz_l, gz_h = six
+
+                # Device block must satisfy:
+                #   logical AX = AZ_device
+                #   logical AY = AY_device
+                #   logical GZ = GX_device
                 block = bytes([
-                    0x00, 0x00,         # GX
-                    0x00, 0x00,         # GY
-                    gz_l, gz_h,         # GZ
-                    ax_l, ax_h,         # AX
-                    ay_l, ay_h,         # AY
-                    0x00, 0x00,         # AZ
+                    gz_l, gz_h,       # GX_device  ← logical GZ
+                    0x00, 0x00,       # GY_device  (unused)
+                    0x00, 0x00,       # GZ_device  (unused under this mapping)
+                    0x00, 0x00,       # AX_device  (unused)
+                    ay_l, ay_h,       # AY_device  ← logical AY
+                    ax_l, ax_h,       # AZ_device  ← logical AX
                 ])
                 return block[:count] if count < 12 else block
             return bytes([0] * count)
-
-        def i2c_write_byte_data(self, handle: int, reg: int, val: int):
-            self._regs[reg & 0xFF] = val & 0xFF
-            return 0
 
         def stop(self): self._handles.clear()
 
