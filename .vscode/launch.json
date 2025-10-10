@@ -95,15 +95,18 @@
       }
     },
     {
-      "name": "Python: Main",
+      "name": "Windows: Main (mock pigpio)",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/main.py",
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
-      "justMyCode": true,
       "internalConsoleOptions": "neverOpen",
+      "justMyCode": true,
+      "subProcess": true,
       "env": {
-        "PYTHONPATH": "${workspaceFolder}"
+        "PYTHONPATH": "${workspaceFolder}",
+        "PIGPIO_FORCE_MOCK": "1"
       }
     },
     {
@@ -111,6 +114,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "pytest",
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "justMyCode": true,
       "internalConsoleOptions": "neverOpen",

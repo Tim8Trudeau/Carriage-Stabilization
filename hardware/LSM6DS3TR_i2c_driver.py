@@ -189,6 +189,7 @@ class LSM6DS3TRDriver:
         deadline = time.perf_counter() + timeout_s
         while True:
             status = self._pi.i2c_read_byte_data(self._h, STATUS_REG) & 0xFF
+            _log.debug(f"LSM6DS3TR STATUS={status} time= {time.perf_counter()} deadline {deadline}")
             if (status & (_STATUS_XLDA | _STATUS_GDA)) == (_STATUS_XLDA | _STATUS_GDA):
                 break
             if time.perf_counter() >= deadline:

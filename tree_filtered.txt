@@ -37,6 +37,7 @@
 |   +-- controller.log
 |   +-- defuzzifier.log
 |   +-- fuzzifier.log
+|   +-- i2c.log
 |   +-- imu.log
 |   +-- main.log
 |   +-- motor.log

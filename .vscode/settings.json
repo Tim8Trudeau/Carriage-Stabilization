@@ -2,7 +2,7 @@
   // --- Python Interpreter ---
   "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
   // Ensure the environment auto-activates in the terminal
-  "python.terminal.activateEnvironment": true
+  "python.terminal.activateEnvironment": true,
   // --- File Associations ---
   "files.associations": {
     "*.json5": "json"
@@ -38,7 +38,10 @@
   },
   // --- Python Testing ---
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["test"],
+  "python.testing.cwd": "${workspaceFolder}",
+  "python.testing.pytestArgs": [
+    "test"
+  ],
 
   "python.testing.unittestEnabled": false,
   "python.testing.autoTestDiscoverOnSaveEnabled": true,

@@ -84,6 +84,13 @@ def _make_mock_host(controller_params: Dict, apply_initial_conditions: bool):
         def i2c_close(self, handle: int):
             self._handles.pop(handle, None)
 
+        def i2c_write_byte_data(self, handle, reg, byte):
+            # self.i2c_write_i2c_block_data(handle, reg, bytes([byte]))
+            return
+
+        def i2c_write_i2c_block_data(self, handle, reg, data):
+            return
+
         def i2c_read_byte_data(self, handle: int, reg: int) -> int:
             if reg == STATUS_REG: return _XLDA | _GDA
             return int(self._regs.get(reg, 0)) & 0xFF
