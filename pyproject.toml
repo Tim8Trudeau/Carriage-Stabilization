@@ -29,9 +29,6 @@ extension-pkg-allow-list = ["pigpio"]
 [tool.pylint.TYPECHECK]
 # Tell pylint these dynamic members exist (avoids "no-member" warnings)
 generated-members = [
-  "spi_xfer",
-  "spi_open",
-  "spi_close",
   "write",
   "read",
   "set_mode"
@@ -48,8 +45,8 @@ generated-members = [
 # [tool.black]
 # line-length = 100
 #
-# [tool.ruff]
-# line-length = 100
+[tool.ruff.lint]
+ignore = ["E401"]
 #
 # [tool.mypy]
 # python_version = "3.11"

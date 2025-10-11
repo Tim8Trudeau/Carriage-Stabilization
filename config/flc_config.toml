@@ -1,4 +1,5 @@
 [controller_params]
+SIM_MODE = false
 MOTOR_HZ = 200.0           # Motor PWM Freq
 SAMPLE_RATE_HZ = 50.0      # dt = 1 / SAMPLE_RATE_HZ : read IMU 20msec
 

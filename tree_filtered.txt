@@ -47,6 +47,8 @@
 |   +-- simulation.log
 |   +-- spi.log
 |   \-- WZ_engine.log
++-- [patches]
+|   \-- i2c_driver_mock_update.patch
 +-- [plots]
 |   +-- omega_membership_functions.png
 |   +-- omega_motor_cmd.png
@@ -67,7 +69,6 @@
 |   +-- [mocks]
 |   |   +-- __init__.py
 |   |   +-- mock_i2c.py
-|   |   +-- mock_LSM6DS3TR_driver.py
 |   |   +-- mock_pigpio.py
 |   |   \-- simulation.py
 |   +-- [unit]

@@ -28,35 +28,40 @@ def _install_fake_pigpio(monkeypatch):
             self._open.clear()
 
     fake_mod = types.ModuleType("pigpio")
-    fake_mod.pi = FakePi
+    setattr(fake_mod, "pi", FakePi)  # Dynamically add the 'pi' attribute    fake_mod.pi = FakePi
     monkeypatch.setitem(sys.modules, "pigpio", fake_mod)
     return fake_mod
 
 
-def _install_stub_mock_i2c(monkeypatch):
     """
-    Ensure imports of 'test.mocks.mock_i2c' or 'mock_i2c' succeed with a tiny stub
-    that implements MockI2CBus.imu_read() -> 6 bytes.
+    Provide a minimal 'test.mocks.mock_pigpio' module whose pi() returns an object
+    with the i2c_* API used by the driver.
     """
-    class StubMockI2CBus:
-        def __init__(self, *a, **k): pass
-        def imu_read(self, **_):
-            # AX=+1, AY=-2, GZ=+3 (little-endian int16)
-            return (1).to_bytes(2, "little", signed=True) + \
-                   (-2).to_bytes(2, "little", signed=True) + \
-                   (3).to_bytes(2, "little", signed=True)
-        def close(self): pass
+def _install_stub_mock_pigpio(monkeypatch):
+    import types, sys
 
-    for name in ("test.mocks.mock_i2c", "mock_i2c"):
-        mod = types.ModuleType(name)
-        mod.MockI2CBus = StubMockI2CBus
-        monkeypatch.setitem(sys.modules, name, mod)
+    class FakePi:
+        def __init__(self): self.connected = True
+        def i2c_open(self, bus, addr, flags=0): return 1
+        def i2c_close(self, h): pass
+        def i2c_read_byte_data(self, h, reg): return 0
+        def i2c_read_i2c_block_data(self, h, reg, count): return (count, bytes([0]*count))
+        def i2c_write_byte_data(self, h, reg, val): pass
+        def stop(self): pass
 
+    mod = types.ModuleType("test.mocks.mock_pigpio")
+
+    # Define a named function (friendlier to static analyzers than a lambda)
+    def pi():
+        return FakePi()
+
+    # Attach it using setattr; add a type-ignore to silence Pylance
+    setattr(mod, "pi", pi)  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "test.mocks.mock_pigpio", mod)
 
 @pytest.mark.unit
 def test_get_i2c_host_returns_pigpio_when_available(monkeypatch):
-    _install_stub_mock_i2c(monkeypatch)   # in case code falls back
-    _install_fake_pigpio(monkeypatch)
+    _install_stub_mock_pigpio(monkeypatch)  # ensure mock is present
 
     import hardware.i2c_driver as i2c_drv
     host = i2c_drv.get_i2c_host({})
@@ -69,7 +74,6 @@ def test_get_i2c_host_returns_pigpio_when_available(monkeypatch):
 
 @pytest.mark.unit
 def test_get_i2c_host_returns_mock_when_forced(monkeypatch):
-    _install_stub_mock_i2c(monkeypatch)
     _install_fake_pigpio(monkeypatch)  # present, but we force mock
 
     monkeypatch.setenv("CS_HW", "mock")
