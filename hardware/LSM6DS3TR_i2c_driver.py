@@ -35,6 +35,8 @@ _BDU_BIT     = 0x40
 _IFINC_BIT   = 0x04
 _STATUS_XLDA = 0x01
 _STATUS_GDA  = 0x02
+_STATUS_TDA  = 0x04
+
 
 class LSM6DS3TRDriver:
     # ---- Added this to hardware/LSM6DS3TR_i2c_driver.py (inside class LSM6DS3TRDriver) ----

@@ -75,6 +75,7 @@ def main_control_loop():
     # LSM6DS3TRDriver.__init__ now performs the device's ODR/BDU/IF_INC init.
     iir_filter = controller_params.get("iir_filter", {})
     imu_sensor = IMU_Driver(iir_filter, controller_params)
+    time.sleep(0.1)  # Allow some time for the IMU to stabilize
     # Fuzzy logic controller
     flc = FLCController(controller_params)
 
