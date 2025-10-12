@@ -5,6 +5,7 @@ from typing import Tuple, Optional, Any
 
 # Switched to I2C-backed device driver
 from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver
+from hardware.LSM6DS3TR_i2c_driver import STATUS_REG as STATUS_REG
 
 imu_log = logging.getLogger("imu")
 
@@ -65,13 +66,10 @@ class IMU_Driver:
         self._ay_lp = 0.0
         self._OMEGA_FS = 32768  # ± full-scale LSB for ω-norm mapping
 
-        imu_log.info(
-            "IMU_Driver init: fs= %.3f Hz | ω_cut= %.3f Hz (α= %.6f) | a_cut= %.3f Hz (α= %.6f) "
-            "| θ_rng= %.4f rad | gyro_fs= %.4f rad/s | accel_fs= %d",
-            self.sample_rate_hz, self.omega_cutoff_hz, self.alpha_omega,
-            self.accel_cutoff_hz, self.alpha_acc,
-            self.theta_range_rad, self.gyro_full_scale_rps, self.accel_raw_fs
-        )
+        imu_log.info(f"IMU_Driver init: fs= {self.sample_rate_hz} Hz | ω_cut= {self.omega_cutoff_hz} Hz |"
+                    f" α= {self.alpha_omega} | a_cut= {self.accel_cutoff_hz} Hz |"
+                    f" (α= {self.alpha_acc} θ_rng= {self.theta_range_rad} rad |"
+                    f" gyro_fs= {self.gyro_full_scale_rps} rad/s | accel_fs= {self.accel_raw_fs}")
 
         self._pi: Optional[Any] = None
         self._h: Optional[int] = None
