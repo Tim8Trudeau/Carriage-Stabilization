@@ -1,6 +1,5 @@
 # test/integration/test_i2c_stack_integration.py
 import math
-import os
 
 def _is_int16(x: int) -> bool:
     return -32768 <= x <= 32767

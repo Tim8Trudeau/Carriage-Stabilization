@@ -1,5 +1,4 @@
 # test/unit/test_lsm6ds3tr_driver_mapping.py
-import pytest
 
 # Registers we care about (match I2C driver)
 CTRL3_C    = 0x12

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 import time
-import math
 
 from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver
 

@@ -65,8 +65,6 @@ def trace_rule_firing(
             plot_rule_contributions(traces, crisp_theta, crisp_omega)
 
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
 
 def plot_rule_contributions(trace_data, crisp_theta, crisp_omega):

@@ -7,7 +7,6 @@ level) and the crisp output value based on the rule's consequent function.
 """
 
 import logging
-from math import e
 from typing import Dict, List, Tuple
 
 rule_engine_log = logging.getLogger("rule_engine")

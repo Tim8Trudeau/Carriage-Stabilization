@@ -7,7 +7,6 @@ import random
 from typing import Tuple
 
 # simulation.py
-import logging, os
 
 class _EnsureI(logging.Filter):
     def filter(self, record):

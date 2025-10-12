@@ -3,7 +3,6 @@
 # Requires pigpio daemon running (sudo pigpiod).
 
 from __future__ import annotations
-import time
 
 from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver  # uses i2c_driver under the hood
 

@@ -8,7 +8,6 @@ of data from imu_sensor to motor to stabilize the carriage.
 """
 
 import time
-import sys
 import tomllib
 import logging
 import os

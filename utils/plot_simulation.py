@@ -95,7 +95,6 @@ def main():
         theta_imu[i] = theta_rad; omega[i] = omega_rad_s; u_cmd[i] = motor_cmd
 
     # Plot
-    import matplotlib.pyplot as plt
     fig, ax1 = plt.subplots(figsize=(10, 5))
     ax1.set_title("Carriage Simulation — θ, ω, motor_cmd vs time")
     ax1.set_xlabel("Time (s)"); ax1.grid(True, which="both", alpha=0.25); ax1.axhline(0.0, linestyle="--", linewidth=0.8)
