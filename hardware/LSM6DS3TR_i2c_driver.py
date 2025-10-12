@@ -9,6 +9,8 @@ import time, logging
 
 _log = logging.getLogger("imu.i2c")
 
+# IMU Register addresses
+
 FIFO_CTRL1  = 0x06
 FIFO_CTRL2  = 0x07
 FIFO_CTRL3  = 0x08
@@ -35,10 +37,7 @@ _STATUS_XLDA = 0x01
 _STATUS_GDA  = 0x02
 
 class LSM6DS3TRDriver:
-# ---- Add this to hardware/LSM6DS3TR_i2c_driver.py (inside class LSM6DS3TRDriver) ----
-
-# Register addresses (reuse any you already defined at top of file)
-
+    # ---- Added this to hardware/LSM6DS3TR_i2c_driver.py (inside class LSM6DS3TRDriver) ----
 
     def _rmw(self, reg: int, *, set_bits: int = 0, clr_bits: int = 0) -> None:
         """Read-modify-write helper."""
@@ -64,7 +63,7 @@ class LSM6DS3TRDriver:
         else:
             _log.info("LSM6DS3TR WHO_AM_I=0x%02X OK", who)
         # ---------------- Basic interface / endianness / sync ----------------
-        # CTRL3_C bits: BDU=bit6, IF_INC=bit2, BLE=bit1 (0=little), SIM=bit0 (SPI 3-wire; keep 0)
+        # CTRL3_C bits: BDU=bit6, IF_INC=bit2, BLE=bit1 (0=little), SIM=bit0 (i2c; keep 0)
         self._rmw(CTRL3_C, set_bits=(1<<6) | (1<<2), clr_bits=(1<<1) | (1<<0))
 
         # Ensure I2C enabled and gyro sleep disabled (CTRL4_C: I2C_DISABLE=bit2, SLEEP_G=bit6)
@@ -140,6 +139,7 @@ class LSM6DS3TRDriver:
         self.init_low_power_52hz()
 
     # --- internal: normalize pigpio/mock block reads to bytes of length n ---
+    # If pigpio is opened, it has i2c_read_i2c_block_data() else its in mock_pigpio.
     def _read_block(self, reg: int, n: int) -> bytes:
         _readdata = self._pi.i2c_read_i2c_block_data(self._h, reg & 0xFF, int(n))
         _log.info(f"called _read_block(readdata ={_readdata}, type={type(_readdata)})")
