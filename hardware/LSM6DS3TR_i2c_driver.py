@@ -195,8 +195,9 @@ class LSM6DS3TRDriver:
         while True:
             status = self._pi.i2c_read_byte_data(self._h, STATUS_REG) & 0xFF # type: ignore
             _log.debug(f"LSM6DS3TR STATUS={status} time= {time.perf_counter()} deadline {deadline}")
-            if (status & (_STATUS_XLDA | _STATUS_GDA)) == (_STATUS_XLDA | _STATUS_GDA):
-                break
+#            if (status & (_STATUS_XLDA | _STATUS_GDA)) == (_STATUS_XLDA | _STATUS_GDA):
+            if status == 3:
+               break
             if time.perf_counter() >= deadline:
                 raise RuntimeError(f"data not ready (STATUS=0x{status:02X})")
         block = self._read_block(OUTX_L_G, 12)
