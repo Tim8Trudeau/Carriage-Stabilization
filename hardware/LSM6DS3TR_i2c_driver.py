@@ -141,7 +141,7 @@ class LSM6DS3TRDriver:
     # --- internal: normalize pigpio/mock block reads to bytes of length n ---
     # If pigpio is opened, it has i2c_read_i2c_block_data() else its in mock_pigpio.
     def _read_block(self, reg: int, n: int) -> bytes:
-        _readdata = self._pi.i2c_read_i2c_block_data(self._h, reg & 0xFF, int(n))
+        _readdata = self._pi.i2c_read_i2c_block_data(self._h, reg & 0xFF, int(n)) # type: ignore
         _log.info(f"called _read_block(readdata ={_readdata}, type={type(_readdata)})")
         ret = _readdata
 
@@ -182,16 +182,16 @@ class LSM6DS3TRDriver:
     def write(self, reg: int, data: bytes | bytearray | Iterable[int]) -> None:
         payload = bytes(data)
         if len(payload) == 1:
-            self._pi.i2c_write_byte_data(self._h, reg & 0xFF, payload[0])
+            self._pi.i2c_write_byte_data(self._h, reg & 0xFF, payload[0]) # type: ignore
         else:
             for i, b in enumerate(payload):
-                self._pi.i2c_write_byte_data(self._h, (reg + i) & 0xFF, b)
+                self._pi.i2c_write_byte_data(self._h, (reg + i) & 0xFF, b) # type: ignore
 
     # --- convenience ---
     def read_ax_ay_gz_bytes(self, timeout_s: float = 0.02) -> bytes:
         deadline = time.perf_counter() + timeout_s
         while True:
-            status = self._pi.i2c_read_byte_data(self._h, STATUS_REG) & 0xFF
+            status = self._pi.i2c_read_byte_data(self._h, STATUS_REG) & 0xFF # type: ignore
             _log.debug(f"LSM6DS3TR STATUS={status} time= {time.perf_counter()} deadline {deadline}")
             if (status & (_STATUS_XLDA | _STATUS_GDA)) == (_STATUS_XLDA | _STATUS_GDA):
                 break
@@ -207,17 +207,20 @@ class LSM6DS3TRDriver:
     def close(self) -> None:
         try:
             if getattr(self, "_h", None) is not None:
-                self._pi.i2c_close(self._h)
+                self._pi.i2c_close(self._h) # type: ignore
         finally:
             stop = getattr(self._pi, "stop", None)
-            if callable(stop): stop()
-            self._h = None; self._pi = None
+            if callable(stop):
+                stop()
+            self._h = None
+            self._pi = None
 
     # --- sim passthroughs (no-op on real pigpio) ---
     def set_motor_cmd(self, v: float) -> None:
         f = getattr(self._pi, "set_motor_cmd", None)
-        if callable(f): f(v)
+        if callable(f):
+            f(v)
 
     def get_sim_theta(self):
         f = getattr(self._pi, "get_sim_theta", None)
-        return float(f()) if callable(f) else None
+        return float(f()) if callable(f) else None # type: ignore

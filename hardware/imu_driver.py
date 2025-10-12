@@ -1,7 +1,7 @@
 # hardware/imu_driver.py
 import math
 import logging
-from typing import Tuple
+from typing import Tuple, Optional, Any
 
 # Switched to I2C-backed device driver
 from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver
@@ -45,7 +45,7 @@ class IMU_Driver:
 
         # Device driver (it owns the I2C bus)
         self._dev = LSM6DS3TRDriver(controller_params=self.controller_params)
-        self._get6 = lambda: self._dev.read_ax_ay_gz_bytes(timeout_s=0.5)        # Normalization ranges
+        self._get6 = lambda: self._dev.read_ax_ay_gz_bytes(timeout_s=0.5)        # type: ignore # Normalization ranges
         self.theta_range_rad = float(self.controller_params.get("THETA_RANGE_RAD", math.pi))
         self.gyro_full_scale_rps = float(self.controller_params.get("GYRO_FULL_SCALE_RADS_S", 4.363))
 
@@ -72,6 +72,9 @@ class IMU_Driver:
             self.accel_cutoff_hz, self.alpha_acc,
             self.theta_range_rad, self.gyro_full_scale_rps, self.accel_raw_fs
         )
+
+        self._pi: Optional[Any] = None
+        self._h: Optional[int] = None
 
     def read_normalized(self) -> Tuple[float, float]:
         """
@@ -107,6 +110,6 @@ class IMU_Driver:
     def close(self) -> None:
         try:
             if getattr(self, "_dev", None) is not None:
-                self._dev.close()
+                self._dev.close() # type: ignore
         finally:
             self._dev = None

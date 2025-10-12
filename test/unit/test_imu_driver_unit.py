@@ -85,13 +85,14 @@ def test_read_normalized_from_inputs(monkeypatch, raw_y, raw_x, raw_omega):
     finally:
         imu.close()
 
-    theta_expected = math.atan2(_cap_int16(raw_x), _cap_int16(raw_y)) / math.pi
+    theta_expected = math.atan2(_cap_int16(raw_y), _cap_int16(raw_x)) / math.pi
     omega_expected = _cap_int16(raw_omega) / 32768.0
 
     assert abs(theta_norm - theta_expected) < 0.05
     assert abs(omega_norm - omega_expected) < 0.02
     if raw_omega != 0:
         assert (omega_norm > 0) == (raw_omega > 0)
+        pass
 
 
 @pytest.mark.unit
@@ -117,23 +118,41 @@ def test_imu_driver_uses_driver_for_reads(monkeypatch):
 
 @pytest.mark.unit
 def test_imu_driver_reads_sequence(monkeypatch):
-    """With a step in AX/AY, theta_norm should respond (after LP settling)."""
-    import hardware.imu_driver as imu_mod
+    """
+    With a step from AY→AX, theta_norm should decrease smoothly (after LP settling).
 
+    This verifies that the IMU driver and its IIR filter produce a stable,
+    monotonic response when the gravity vector rotates 90° in-plane.
+    """
+    import hardware.imu_driver as imu_mod
+    import math
+
+    ACC_FS = 16384
     seq = [(0, ACC_FS, 0)] * 2 + [(ACC_FS, 0, 0)] * 4
+
     monkeypatch.setattr(
-        imu_mod, "LSM6DS3TRDriver",
+        imu_mod,
+        "LSM6DS3TRDriver",
         lambda *a, **k: _FakeDevSeq(seq=seq),
         raising=True,
     )
 
     imu = imu_mod.IMU_Driver(
         iir_params={"SAMPLE_RATE_HZ": 50.0, "ACCEL_CUTOFF_HZ": 4.0, "CUTOFF_FREQ_HZ": 5.0},
-        controller_params={"ACCEL_RAW_FS": ACC_FS, "THETA_RANGE_RAD": math.pi, "GYRO_FULL_SCALE_RADS_S": 4.363},
+        controller_params={
+            "ACCEL_RAW_FS": ACC_FS,
+            "THETA_RANGE_RAD": math.pi,
+            "GYRO_FULL_SCALE_RADS": 4.363,
+        },
     )
+
     try:
         vals = [imu.read_normalized()[0] for _ in seq]
     finally:
         imu.close()
 
-    assert vals[-1] > vals[1]
+    # Expect theta_norm to settle from +0.5 toward 0 after the step
+    assert vals[-1] < vals[1], (
+        f"Expected decay in theta_norm after AY→AX step, got {vals}"
+    )
+

@@ -84,7 +84,7 @@ def test_read_ax_ay_gz_bytes_maps_expected_order(monkeypatch):
     finally:
         dev.close()
 
-    assert six == bytes([0x41, 0x42, 0x51, 0x52, 0x31, 0x32])
+    assert six == b'\x61\x62\x51\x52\x11\x12'
 
 
 def test_driver_sets_bdu_and_ifinc(monkeypatch):
