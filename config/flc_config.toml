@@ -200,3 +200,13 @@ output = { theta_coeff = -1.0, omega_coeff = -0.4, bias = 0 }
 [[rule_base]]
 rule = ["LECW", "LVCW"]
 output = { theta_coeff = -1.0, omega_coeff = -1.0, bias = 0 }
+
+# ============================================================
+# FLC Input Scaling Block
+# These ranges convert physical theta (rad) and omega (rad/s)
+# into normalized fuzzy inputs in [-1, +1].
+# ============================================================
+
+[scaling]
+THETA_MAX_RAD = 0.50        # ≈ 20 degrees
+OMEGA_MAX_RAD_S = 4.0       # based on physical wheel dynamics

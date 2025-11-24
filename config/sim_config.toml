@@ -1,21 +1,73 @@
-[simulation.timing]
-SAMPLE_RATE_HZ = 50.0          # dt = 1 / SAMPLE_RATE_HZ : read IMU 20msec
-DURATION_S     = 10.0          # total simulated seconds
+# ============================================================
+# Carriage Stabilization — Physics Simulation Configuration
+# For: carriage_simulator.py (inertia-based model)
+# ============================================================
 
-[simulation.initial_conditions]
-THETA_INITIAL_RAD =   0.1      # initial angle (rad)
-OMEGA_INITIAL_RAD_S = -1       # initial angular rate (rad/s)
+# ============================================================
+# Simulation initial conditions
+# ============================================================
+[initial_conditions]
+THETA_INITIAL_RAD   = 0.05     # rad
+OMEGA_INITIAL_RAD_S = 0.0      # rad/s
+START_TIME_S        = 0.0
 
-[simulation.mechanics]
-WHEEL_RADIUS_M   = 0.604        # 604 mm -> meters
-CARRIAGE_MASS_KG = 1.0          # or from prior estimate; adjust as needed
-MOTOR_FORCE_N    = 8.71         # max tangential force at rim for motor_cmd=±1
-GRAVITY_M_S2     = 9.80665      # g
+# ============================================================
+# Mechanical plant parameters (match PlantParams dataclass)
+# ============================================================
+[plant]
+I = 0.055             # kg*m^2  moment of inertia
+m = 1.80              # kg      effective mass
+r = 0.12              # m       COM radius
+b = 0.004             # N*m*s   viscous damping
+g = 9.80665           # m/s^2
 
-[simulation.imu_model]
-GYRO_FS_RAD_S = 4.363           # gyro full-scale in rad/s (maps to ±16384 raw)
-ACCEL_RAW_FS  = 16384           # raw full-scale counts for accel mapping
-NOISE_SPAN    = 0               # randint(-NOISE_SPAN, +NOISE_SPAN) added to x_raw, y_raw
+# ============================================================
+# Motor model (match MotorParams dataclass)
+# ============================================================
+[motor]
+# Electrical model
+R          = 156.0       # Ohms (derived from no-load data)
+Kt         = 0.16        # N*m/A (estimated from torque + current)
+Kv         = 0.16        # V/(rad/s)
 
+# Voltage supply
+V_max      = 24.0        # Rated voltage
+
+# Current limits
+I_max      = 1.0         # A (estimated stall current)
+
+# Torque saturation
+tau_max    = 0.16        # N*m (estimated stall torque)
+
+# Gearbox
+gear_ratio = 8.7         # motor:joint ratio
+eta        = 0.85        # est. gearbox efficiency
+
+# ============================================================
+# Simulation numeric parameters (match SimConfig dataclass)
+# ============================================================
+[simulation]
+dt            = 0.002
+steps_per_log = 10
+tau_ext       = 0.0
+DURATION_S    = 10.0
+
+# ============================================================
+# Controller selection
+# ============================================================
+[controller]
+type = "PD"                  # "PD", "FLC", "NONE"
+
+# PD controller params
+Kp = -2.0
+Kd = -0.4
+
+# Path to fuzzy logic controller file
+FLC_CONFIG_PATH = "config/flc_config.toml"
+
+# ============================================================
+# Logging controls (optional)
+# ============================================================
 [logging]
-LEVEL = "DEBUG"
+LEVEL = "INFO"
+WRITE_CSV = false

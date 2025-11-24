@@ -59,6 +59,10 @@
 |   +-- get_dir_tree.ps1
 |   +-- WatchMAC.ps1
 |   \-- WHO_AM_I_spi.py
++-- [simulation]
+|   +-- carriage_simulator.py
+|   +-- load_sim_config.py
+|   \-- plot_sim_results.py
 +-- [test]
 |   +-- [integration]
 |   |   +-- __init__.py
