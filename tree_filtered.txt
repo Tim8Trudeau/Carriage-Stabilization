@@ -61,7 +61,7 @@
 |   \-- WHO_AM_I_spi.py
 +-- [simulation]
 |   +-- carriage_simulator.py
-|   +-- load_sim_config.py
+|   +-- central_config.py
 |   \-- plot_sim_results.py
 +-- [test]
 |   +-- [integration]
@@ -96,10 +96,12 @@
 |   +-- imu_watch.py
 |   +-- logger.py
 |   +-- motor_control.py
+|   +-- plot_flc_alignment.py
 |   +-- plot_membership_shapes.py
 |   +-- plot_simulation.py
 |   +-- profiler.py
 |   +-- rule_trace.py
+|   +-- validate_flc_inputs.py
 |   \-- whoami_i2c.py
 +-- .gitignore
 +-- Carriage Stabilization.code-workspace
