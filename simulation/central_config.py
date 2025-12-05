@@ -78,7 +78,6 @@ Typical Usage
 This loader allows high-level scripts (main.py, test harnesses,
 batch sweep tools) to construct simulations cleanly and uniformly.
 """
-
 import tomllib
 from typing import Callable, Optional
 
@@ -87,7 +86,7 @@ from flc.controller import FLCController
 
 
 # ------------------------------------------------------------
-# Load TOML file into Python dict
+# Load TOML
 # ------------------------------------------------------------
 def _load_toml(path: str) -> dict:
     with open(path, "rb") as f:
@@ -95,44 +94,33 @@ def _load_toml(path: str) -> dict:
 
 
 # ------------------------------------------------------------
-# Load FLC (Sugeno) controller
+# Load FLC controller
 # ------------------------------------------------------------
 def load_flc_from_file(path: str) -> FLCController:
-    """
-    Load 'config/flc_config.toml' and build an FLCController.
-
-    The FLC expects a Python dict with membership definitions,
-    rule table, and defuzzification parameters.
-    """
     flc_cfg = _load_toml(path)
     return FLCController(flc_cfg)
 
 
 # ------------------------------------------------------------
-# Load full simulation configuration
+# Main loader
 # ------------------------------------------------------------
 def load_simulation_config(
-    sim_cfg_path: str = "config/sim_config.toml"
+    sim_cfg_path: str = "config/sim_config.toml",
 ):
     """
-    Loads the complete simulation configuration and returns:
+    Builds and returns the full simulation configuration:
 
         plant       : PlantParams
         motor       : MotorParams
         sim_cfg     : SimConfig
-        duration    : float (seconds)
-        controller  : Callable[theta, omega, t] → motor_cmd
+        duration    : float
+        controller  : Callable[theta,omega,t] → cmd
         ic_tuple    : (theta0, omega0, t0)
-
-    This supports:
-        - PD controller
-        - Sugeno FLC controller
-        - No controller (open loop)
     """
     cfg = _load_toml(sim_cfg_path)
 
     # ------------------------------------------------------------
-    # Plant parameters
+    # Mechanical plant
     # ------------------------------------------------------------
     plant = PlantParams(
         I=float(cfg["plant"]["I"]),
@@ -143,21 +131,17 @@ def load_simulation_config(
     )
 
     # ------------------------------------------------------------
-    # Motor parameters
+    # NEW FRICTION-DRIVE MOTOR MODEL (correct)
     # ------------------------------------------------------------
     motor = MotorParams(
-        R=float(cfg["motor"]["R"]),
-        Kt=float(cfg["motor"]["Kt"]),
-        Kv=float(cfg["motor"]["Kv"]),
-        V_max=float(cfg["motor"]["V_max"]),
-        I_max=float(cfg["motor"]["I_max"]),
-        tau_max=float(cfg["motor"]["tau_max"]),
-        gear_ratio=float(cfg["motor"]["gear_ratio"]),
-        eta=float(cfg["motor"]["eta"]),
+        tau_motor_one=float(cfg["motor"]["tau_motor_one"]),
+        n_rollers=int(cfg["motor"]["n_rollers"]),
+        r_roller=float(cfg["motor"]["r_roller"]),
+        r_wheel=float(cfg["motor"]["r_wheel"]),
     )
 
     # ------------------------------------------------------------
-    # Simulation settings
+    # Simulation configuration
     # ------------------------------------------------------------
     sim_cfg = SimConfig(
         dt=float(cfg["simulation"]["dt"]),
@@ -168,7 +152,7 @@ def load_simulation_config(
     duration = float(cfg["simulation"]["DURATION_S"])
 
     # ------------------------------------------------------------
-    # Initial conditions (theta, omega, t)
+    # Initial conditions
     # ------------------------------------------------------------
     icfg = cfg["initial_conditions"]
     ic_tuple = (
@@ -196,27 +180,26 @@ def load_simulation_config(
         controller = pd_controller
 
     elif ctrl_type == "FLC":
+        print(">>> Controller type = FLC")
         flc_path = ctrl_cfg["FLC_CONFIG_PATH"]
+        print(">>> Loading FLC config from:", flc_path)
 
-        # Load fuzzy logic config
         flc_cfg = _load_toml(flc_path)
+        print(">>> Loaded keys:", flc_cfg.keys())
+
         flc = FLCController(flc_cfg)
 
-        # ------------------------------------------------------------
-        # Load scaling parameters for normalization
-        # ------------------------------------------------------------
+
+        # Input scaling
         scale_cfg = flc_cfg.get("scaling", {})
         theta_max = float(scale_cfg.get("THETA_MAX_RAD", 1.0))
         omega_max = float(scale_cfg.get("OMEGA_MAX_RAD_S", 1.0))
 
-        # Create scaling wrapper so simulator inputs are normalized
         def flc_controller(theta, omega, t):
-            # Normalize to [-1, +1]
-            theta_norm = max(-1.0, min(1.0, theta / theta_max))
-            omega_norm = max(-1.0, min(1.0, omega / omega_max))
-
-            # Pass normalized values to Sugeno FLC
-            return flc.calculate_motor_cmd(theta_norm, omega_norm)
+            # Normalize
+            theta_n = max(-1.0, min(1.0, theta / theta_max))
+            omega_n = max(-1.0, min(1.0, omega / omega_max))
+            return flc.calculate_motor_cmd(theta_n, omega_n)
 
         controller = flc_controller
 

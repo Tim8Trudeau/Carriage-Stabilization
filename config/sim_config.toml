@@ -12,36 +12,28 @@ OMEGA_INITIAL_RAD_S = 0.0      # rad/s
 START_TIME_S        = 0.0
 
 # ============================================================
-# Mechanical plant parameters (match PlantParams dataclass)
+# Mechanical plant parameters (updated)
 # ============================================================
 [plant]
-I = 0.055             # kg*m^2  moment of inertia
-m = 1.80              # kg      effective mass
-r = 0.12              # m       COM radius
-b = 0.004             # N*m*s   viscous damping
-g = 9.80665           # m/s^2
+I = 0.42             # kg*m^2  UPDATED inertia (computed from mass & geometry)
+m = 1.088            # kg      UPDATED actual carriage mass (2.4 lb)
+r = 0.622            # m       UPDATED COM radius
+b = 0.004            # N*m*s   viscous damping
+g = 9.80665          # m/s^2
 
 # ============================================================
 # Motor model (match MotorParams dataclass)
 # ============================================================
 [motor]
-# Electrical model
-R          = 156.0       # Ohms (derived from no-load data)
-Kt         = 0.16        # N*m/A (estimated from torque + current)
-Kv         = 0.16        # V/(rad/s)
-
-# Voltage supply
-V_max      = 24.0        # Rated voltage
-
-# Current limits
-I_max      = 1.0         # A (estimated stall current)
+# Direct physical torque model (no electrical model)
+# Two friction rollers, each 0.16 N*m stall torque at shaft.
+tau_motor_one = 0.16      # N*m per roller
+n_rollers     = 2         # two synchronized motors
+r_roller      = 0.012     # m   (24 mm diameter)
+r_wheel       = 0.6096    # m   (48 in ID)
 
 # Torque saturation
 tau_max    = 0.16        # N*m (estimated stall torque)
-
-# Gearbox
-gear_ratio = 8.7         # motor:joint ratio
-eta        = 0.85        # est. gearbox efficiency
 
 # ============================================================
 # Simulation numeric parameters (match SimConfig dataclass)
@@ -56,14 +48,13 @@ DURATION_S    = 10.0
 # Controller selection
 # ============================================================
 [controller]
-type = "PD"                  # "PD", "FLC", "NONE"
+type = "FLC"                  # "PD", "FLC", "NONE"
 
 # PD controller params
 Kp = -2.0
 Kd = -0.4
 
-# Path to fuzzy logic controller file
-FLC_CONFIG_PATH = "config/flc_config.toml"
+FLC_CONFIG_PATH = "config/flc_config.toml"  # Path to fuzzy logic controller file
 
 # ============================================================
 # Logging controls (optional)

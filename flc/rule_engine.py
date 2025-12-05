@@ -55,30 +55,29 @@ class RuleEngine:
         Evaluates all rules in the rule base.
 
         For each rule, it computes:
-            - The firing strength (W), taken as the maximum of the membership
-            degrees of the antecedents (fuzzy OR).
-            - The crisp output (Z), calculated from a Sugeno-style linear equation.
+            - The firing strength (W), taken as the minimum of the membership
+              degrees of the antecedents (fuzzy AND).
+            - The crisp output (Z), calculated from a Sugeno-style linear equation:
 
-        Z represents the corrective motor command contributed by a rule. The consequent
-        is defined as a linear function of the crisp inputs (theta, omega), parameterized by:
+                    Z = a*theta + b*omega + c
 
-            - theta_coeff: coefficient applied to theta (must be negative)
-            - omega_coeff: coefficient applied to omega (must be negative)
-            - bias: constant offset term
+              where:
+                a = theta_coeff  (must be negative)
+                b = omega_coeff  (must be negative)
+                c = bias         (usually 0)
 
-        Additional rule-level scale factors (THETA_SCALE_FACTOR, OMEGA_SCALE_FACTOR)
-        are applied when calculating Z1 and Z2.
-
-        Design constraint:
-            Both theta_coeff and omega_coeff must remain negative to enforce
-            negative feedback, ensuring the motor command acts to reduce
-            positional error and restore the system toward the setpoint.
+        IMPORTANT DESIGN NOTE:
+            The original implementation incorrectly multiplied membership degrees
+            and discrete sign() functions, which caused discontinuities and
+            high-frequency "barcode" oscillations. This patched version correctly
+            uses the crisp normalized inputs (already ∈ [-1,1]) directly in the
+            Sugeno consequent.
 
         Args:
             fuzzified_theta (Dict[str, float]): Membership degrees for theta.
             fuzzified_omega (Dict[str, float]): Membership degrees for omega.
-            crisp_theta (float): The original normalized theta value.
-            crisp_omega (float): The original normalized omega value.
+            crisp_theta (float): The original normalized theta value in [-1, 1].
+            crisp_omega (float): The original normalized omega value in [-1, 1].
             plot (bool, optional): If True, generates a plot of the rule firing
                 strengths and outputs. Defaults to False.
 
@@ -86,14 +85,11 @@ class RuleEngine:
             List[Tuple[float, float]]: A list of (W, Z) tuples, where W is the
             firing strength and Z is the crisp output for each active rule.
         """
-        # Optionally plot the rule firing details.
+
+        # Optionally invoke detailed tracing (disabled by default for speed)
         plot = False
         if plot:
             from utils.rule_trace import trace_rule_firing
-
-            # Get the detailed trace of rule firing
-            # This will include membership degrees, firing strengths, and Z outputs and
-            # plots the results.
             trace_rule_firing(
                 self.rules,
                 fuzzified_theta,
@@ -103,70 +99,62 @@ class RuleEngine:
                 plot=False,
             )
 
-        # Log the rule firing details
-        # Log the input values and their fuzzified membership degrees
-        # This helps in debugging and understanding the rule evaluation process.
+        # Log fuzzified values for debugging
         rounded = {k: round(v, 3) for k, v in fuzzified_theta.items()}
         rule_engine_log.info("Theta: %.3f, fuzzy_Theta=%s", crisp_theta, rounded)
 
         rounded = {k: round(v, 3) for k, v in fuzzified_omega.items()}
         rule_engine_log.info("Omega: %.3f, fuzzy_Omega=%s", crisp_omega, rounded)
 
-
-        # Initialize a list to hold the outputs of contributing rules.
-        # An contributing rule is one that has a non-zero firing strength.
+        # Collect active rules
         active_rules_output = []
+
         for i, rule in enumerate(self.rules):
-            antecedent = rule["rule"] # Rule antecedent: [theta_set, omega_set]
+            antecedent = rule["rule"]     # [theta_set, omega_set]
             theta_set = antecedent[0]
             omega_set = antecedent[1]
 
-            # Get membership degrees, default to 0 if rule does not contribute.
+            # Membership degrees (0 if not applicable)
             degree_theta = fuzzified_theta.get(theta_set, 0.0)
             degree_omega = fuzzified_omega.get(omega_set, 0.0)
 
-            # Firing strength (W) is the fuzzy OR (max) of the rules membership degrees.
-            firing_strength = max(degree_theta, degree_omega)
+            # Firing strength is the fuzzy AND (min) of the rules membership degrees.
+            firing_strength = min(degree_theta, degree_omega)
 
             if firing_strength > 0:
                 consequent = rule["output"]
-                z1 = (
-                    consequent["theta_coeff"]
-                    * self.theta_scale_factor
-                    * degree_theta
-                    * ((crisp_theta > 0) - (crisp_theta < 0)) #get sign of crisp_theta
+
+                # Correct Sugeno linear consequent
+                # Use crisp theta/omega (already normalized to [-1,1])
+                z = (
+                    consequent["theta_coeff"] * self.theta_scale_factor * crisp_theta
+                    + consequent["omega_coeff"] * self.omega_scale_factor * crisp_omega
+                    + consequent["bias"]
                 )
-                z2 = (
-                    consequent["omega_coeff"]
-                    * self.omega_scale_factor
-                    * degree_omega
-                    * ((crisp_omega > 0) - (crisp_omega < 0)) #get sign of crisp_omega
-                )
-                z3 = consequent["bias"]
-                z = z1 + z2 + z3
 
                 active_rules_output.append((firing_strength, z))
-                if degree_theta > degree_omega:
-                    conseq = "theta_coeff"
-                else:
-                    conseq = "omega_coeff"
 
+                # Detailed rule logging
                 WZ_log.debug(
-                    "Rule# %d (theta_member %s) (omega_member %s) "
-                    "Z=%.2f , Z1_theta=%.2f, Z2_omega=%.2f ",
+                    "Rule# %d (theta_set=%s, omega_set=%s) "
+                    "Z=%.3f | theta_term=%.3f | omega_term=%.3f | bias=%.3f",
                     i,
-                    theta_set, omega_set,
-                    z, z1, z2,
+                    theta_set,
+                    omega_set,
+                    z,
+                    consequent["theta_coeff"] * crisp_theta,
+                    consequent["omega_coeff"] * crisp_omega,
+                    consequent["bias"],
                 )
                 WZ_log.debug(
-                    "crisp_theta= %.2f, degree_theta= %.2f, "
-                    "degree_omega= %.2f, "
-                    "W= %.2f |%s rule_consq= %.2f",
-                    crisp_theta, degree_theta,
+                    "crisp_theta= %.3f, degree_theta= %.3f, degree_omega= %.3f, W= %.3f",
+                    crisp_theta,
+                    degree_theta,
                     degree_omega,
-                    firing_strength, conseq, consequent[conseq],
+                    firing_strength,
                 )
             else:
-                WZ_log.debug("Rule# %d W= %.2f", i, firing_strength)
+                WZ_log.debug("Rule# %d W= %.3f", i, firing_strength)
 
         return active_rules_output
+# End of rule_engine.py

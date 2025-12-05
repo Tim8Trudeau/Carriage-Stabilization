@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "Pi: motor_control (200Hz, step 0.05)",
       "type": "debugpy",
@@ -144,6 +145,19 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "internalConsoleOptions": "neverOpen",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Run Carriage Simulator",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/simulation/run_simulation.py",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}",
       "env": {
         "PYTHONPATH": "${workspaceFolder}"
       }
