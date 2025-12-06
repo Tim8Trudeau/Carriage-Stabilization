@@ -146,7 +146,6 @@ def load_simulation_config(
     sim_cfg = SimConfig(
         dt=float(cfg["simulation"]["dt"]),
         steps_per_log=int(cfg["simulation"]["steps_per_log"]),
-        tau_ext=float(cfg["simulation"]["tau_ext"]),
     )
 
     duration = float(cfg["simulation"]["DURATION_S"])

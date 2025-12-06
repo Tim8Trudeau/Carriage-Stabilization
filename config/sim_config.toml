@@ -42,7 +42,7 @@ tau_max    = 0.16        # N*m (estimated stall torque)
 dt            = 0.002
 steps_per_log = 10
 tau_ext       = 0.0
-DURATION_S    = 10.0
+DURATION_S    = 20.0
 
 # ============================================================
 # Controller selection

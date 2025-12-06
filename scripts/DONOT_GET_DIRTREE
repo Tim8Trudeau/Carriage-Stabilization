@@ -2,7 +2,7 @@
 Usage:
   .\scripts\get_dir_tree.ps1
   .\scripts\get_dir_tree.ps1 "." "tree_filtered.txt"
-#>python
+#>
 
 $base = Get-Location
 
@@ -18,7 +18,6 @@ $ignoreDirs = @(
   '.venv', 'venv', '.git', '__pycache__', '.pytest_cache', '.vscode',
   '.mypy_cache', '.ruff_cache'
 )
-pytest_cache
 function Show-Tree {
   param(
     [string]$Path,

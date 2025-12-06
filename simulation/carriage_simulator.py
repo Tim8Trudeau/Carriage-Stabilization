@@ -47,11 +47,18 @@ Typical usage::
 
 This simulator contains no configuration parsing, plotting, or hardware code.
 All inputs must be provided programmatically or through the loader.
+
+UPDATED:
+    - Integrates simulation.perturbations.Perturbation
+    - Adds external torque input tau_ext(t)
+    - Logs tau_ext for perturbation-aware plotting overlays
+    - No changes to controller API or plant physics
 """
 
 from dataclasses import dataclass, field
 from typing import Callable, Optional, List
 import math
+from simulation.perturbations import Perturbation   # <--- NEW
 
 
 # ------------------------------------------------------------
@@ -60,10 +67,10 @@ import math
 
 @dataclass
 class MotorParams:
-    tau_motor_one: float   # N*m per roller
-    n_rollers: int         # number of rollers (usually 2)
-    r_roller: float        # roller radius (m)
-    r_wheel: float         # wheel radius (m)
+    tau_motor_one: float
+    n_rollers: int
+    r_roller: float
+    r_wheel: float
 
 
 @dataclass
@@ -79,11 +86,10 @@ class PlantParams:
 class SimConfig:
     dt: float = 0.002
     steps_per_log: int = 10
-    tau_ext: float = 0.0    # external disturbance torque
 
 
 # ------------------------------------------------------------
-# Main simulator
+# Simulator
 # ------------------------------------------------------------
 
 @dataclass
@@ -102,6 +108,7 @@ class CarriageSimulator:
     log_omega: List[float] = field(default_factory=list)
     log_tau_m: List[float] = field(default_factory=list)
     log_tau_g: List[float] = field(default_factory=list)
+    log_tau_ext: List[float] = field(default_factory=list)   # <--- NEW
     log_cmd: List[float] = field(default_factory=list)
     _log_decim: int = 0
 
@@ -110,13 +117,30 @@ class CarriageSimulator:
         self.theta = theta
         self.omega = omega
         self.t = t
+
         self.log_t.clear()
         self.log_theta.clear()
         self.log_omega.clear()
         self.log_tau_m.clear()
         self.log_tau_g.clear()
+        self.log_tau_ext.clear()   # <--- NEW
         self.log_cmd.clear()
         self._log_decim = 0
+
+        # Install perturbation driver
+        self.perturb = Perturbation()
+
+        # Default test conditions:
+        # 1. Impulse at t = 5
+        self.perturb.add_impulse(t0=5.0, magnitude=0.35)
+
+        # 2. Step from t = 10 to 15
+        self.perturb.add_step(10.0, 15.0, magnitude=0.04)
+
+        # Additional tests can be enabled:
+        # self.perturb.add_noise(0.01)
+        # self.perturb.add_sine(amplitude=0.02, freq=1.0)
+        # self.perturb.add_random_kick(magnitude=0.1, probability=0.005)
 
     # ------------------------------------------------------------
     def _gravity_torque(self):
@@ -124,40 +148,37 @@ class CarriageSimulator:
 
     # ------------------------------------------------------------
     def _motor_torque(self, motor_cmd: float):
-        """
-        Convert motor command [-1..1] into actual wheel torque
-        using the friction-drive roller physics.
-        """
+        """Convert motor command [-1..1] into torque via friction-drive rollers."""
         tau_one = self.motor.tau_motor_one
         n = self.motor.n_rollers
         r_roller = self.motor.r_roller
         r_wheel = self.motor.r_wheel
 
-        # torque at two roller shafts
         tau_rollers = motor_cmd * tau_one * n
-
-        # tangential force
         F_tangent = tau_rollers / r_roller
-
-        # wheel torque
         return F_tangent * r_wheel
 
     # ------------------------------------------------------------
     def step(self):
+        # Controller
         cmd = self.controller(self.theta, self.omega, self.t) if self.controller else 0.0
         cmd = max(-1.0, min(1.0, cmd))
 
+        # Motor & plant torques
         tau_m = self._motor_torque(cmd)
         tau_g = self._gravity_torque()
         tau_d = -self.plant.b * self.omega
 
-        alpha = (tau_m - tau_g + tau_d + self.cfg.tau_ext) / self.plant.I
+        # NEW: perturbation torque
+        tau_ext = self.perturb.get(self.t)
 
+        # Dynamics
+        alpha = (tau_m - tau_g + tau_d + tau_ext) / self.plant.I
         self.omega += alpha * self.cfg.dt
         self.theta += self.omega * self.cfg.dt
         self.t     += self.cfg.dt
 
-        # Logging
+        # Logging (decimated)
         self._log_decim += 1
         if self._log_decim >= self.cfg.steps_per_log:
             self.log_t.append(self.t)
@@ -165,6 +186,7 @@ class CarriageSimulator:
             self.log_omega.append(self.omega)
             self.log_tau_m.append(tau_m)
             self.log_tau_g.append(tau_g)
+            self.log_tau_ext.append(tau_ext)   # <--- NEW
             self.log_cmd.append(cmd)
             self._log_decim = 0
 

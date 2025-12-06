@@ -1,56 +1,60 @@
 {
-  // --- Python Interpreter ---
-  "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
-  // Ensure the environment auto-activates in the terminal
-  "python.terminal.activateEnvironment": true,
-  // --- File Associations ---
-  "files.associations": {
-    "*.json5": "json"
-  },
-  // --- Ruff: Linting & Formatting ---
-  "python.linting.enabled": true,
-  "python.linting.ruffEnabled": true,
-  // Only Ruff is enabled as linter:
-  "python.linting.flake8Enabled": false,
-  "python.linting.pylintEnabled": false,
-  "python.linting.mypyEnabled": false,
-  // Customize Ruff linting arguments as needed:
-  "python.linting.ruffArgs": [
-    "--select=ALL", // Enable all rules (customize for your project)
-    "--ignore=W291" // Example: ignore trailing whitespace warning
-  ],
-  // Use Ruff for formatting (requires Ruff extension):
-  "editor.defaultFormatter": "charliermarsh.ruff",
-  "editor.formatOnSave": false,
-  // --- Pylance: Language Server & Type Checking ---
-  "python.languageServer": "Pylance",
-  "python.analysis.typeCheckingMode": "basic", // Set to "strict" for more checks
-  "python.analysis.autoImportCompletions": true,
-  "python.analysis.diagnosticMode": "openFilesOnly",
-  "python.analysis.exclude": [
-    "**/__pycache__",
-    "**/build",
-    "**/dist"
-  ],
-  // Suppress "missing imports" warnings (optional)
-  "python.analysis.diagnosticSeverityOverrides": {
-    "reportMissingImports": "none"
-  },
-  // --- Python Testing ---
-  "python.testing.pytestEnabled": true,
-  "python.testing.cwd": "${workspaceFolder}",
-  "python.testing.pytestArgs": [
-    "test"
-  ],
+    "github.copilot.enable": {
+        "*": false
+    },
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.fixAll": [
+        "source.unusedImports"
+    ],
+    "window.restoreWindows": "one",
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "workbench.settings.useSplitJSON": false,
+    "window.density.editorTabHeight": "compact",
+    "testing.coverageToolbarEnabled": true,
+    "git.alwaysShowStagedChangesResourceGroup": true,
+    "json.trace.server": "messages",
+    "python.testing.pytestEnabled": true,
+    "debugpy.showPythonInlineValues": true,
+    "github.copilot.codeEdits.enable": false,
+    "github.copilot.languages": {
+    "python": false,
+    "plaintext": false,
+    "markdown": false
+    },
+    "github.copilot.editor.inlineSuggest.enable": false,
+    "github.copilot.chat.codeExecution.enabled": false,
+    "github.copilot.editor.enableCodeActions": false,
+    "github.copilot.chat.enableCodeActions": false,
+    "github.copilot.advanced": {
+        "runEditCommands": false,
+        "enableInlineCompletions": false
+    },
+    "github.copilot.feedback.enableNotifications": false,
+    "github.copilot.suggestions.enabled": false,
+    "github.copilot.workspaceHints.enabled": false,
+    "git.suggestSmartCommit": false,
+    "workbench.commandPalette.experimental.suggestCommands": true,
+    "workbench.commandPalette.preserveInput": true,
+    "workbench.quickOpen.closeOnFocusLost": false,
 
-  "python.testing.unittestEnabled": false,
-  "python.testing.autoTestDiscoverOnSaveEnabled": true,
-  // --- Import Resolution (for local modules) ---
-  "python.analysis.extraPaths": [
-    "./"
-  ],
-  // --- Editor Preferences ---
-  "editor.rulers": [
-    88 // Set line length ruler (matches Black/Ruff default)
-  ]
+    // Auto-save behavior
+    "files.autoSave": "onFocusChange",
+    "files.trimTrailingWhitespace": true,
+
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+
+    "explorer.confirmDelete": false,
+    "editor.minimap.enabled": false,
+    "workbench.settings.editor": "json",
+    "workbench.editor.closeOnFileDelete": true,
+    "workbench.editor.enablePreview": false,
+    "workbench.editor.closeEmptyGroups": false,
+
+    "git.confirmSync": false,
+    "workbench.startupEditor": "none",
+
+    "terminal.integrated.enableMultiLinePasteWarning": "never",
+    "git.autofetch": true
 }

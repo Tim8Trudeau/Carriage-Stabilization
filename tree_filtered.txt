@@ -1,6 +1,10 @@
 ﻿[Carriage Stabilization]
++-- [analysis]
+|   +-- stability_analysis.py
+|   \-- stability_plots.py
 +-- [config]
 |   +-- flc_config.toml
+|   +-- original flc_config.toml
 |   \-- sim_config.toml
 +-- [DOCS]
 |   +-- Block Diagram.odg
@@ -34,25 +38,8 @@
 |   +-- LSM6DS3TR_i2c_driver.py
 |   \-- pwm_driver.py
 +-- [logs]
-|   +-- controller.log
-|   +-- defuzzifier.log
-|   +-- fuzzifier.log
-|   +-- i2c.log
-|   +-- imu.log
-|   +-- main.log
-|   +-- motor.log
-|   +-- profiler.log
-|   +-- rule_engine.log
-|   +-- simloop.log
-|   +-- simulation.log
-|   +-- spi.log
-|   \-- WZ_engine.log
 +-- [plots]
-|   +-- omega_membership_functions.png
-|   +-- omega_motor_cmd.png
-|   +-- sim_output.png
-|   +-- theta_membership_functions.png
-|   \-- theta_omega_motor_cmd_timeseries.png
+|   \-- sim_output.png
 +-- [scripts]
 |   +-- clean_logs.py
 |   +-- FindPrivateMACs.ps1
@@ -62,7 +49,9 @@
 +-- [simulation]
 |   +-- carriage_simulator.py
 |   +-- central_config.py
-|   \-- plot_sim_results.py
+|   +-- perturbations.py
+|   +-- plot_sim_results.py
+|   \-- run_simulation.py
 +-- [test]
 |   +-- [integration]
 |   |   +-- __init__.py
@@ -88,6 +77,7 @@
 |   +-- test_imu_driver_api_contract.py
 |   +-- test_imu_driver_filters.py
 |   +-- test_motor_driver.py
+|   +-- test_motor_model.py
 |   \-- test_rule_engine.py
 +-- [utils]
 |   +-- __init__.py
