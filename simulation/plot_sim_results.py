@@ -267,6 +267,3 @@ def monte_carlo_test(sim_factory, N=40) -> Dict[str, float]:
     print("==========================================")
 
     return results
-
-
-.

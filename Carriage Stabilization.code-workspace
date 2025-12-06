@@ -5,12 +5,19 @@
 		}
 	],
 	"settings": {
-		"editor.find.autoFindInSelection": "multiline",
-		"python.createEnvironment.contentButton": "show",
-		"python.languageServer": "Pylance",
-		"python.analysis.diagnosticSeverityOverrides": {
-			"reportMissingModuleSource": "none",
-			"reportShadowedImports": "none"
-		}
+		"workbench.settings.useSplitJSON": false,
+		"window.density.editorTabHeight": "compact",
+		"testing.coverageToolbarEnabled": true,
+		"json.trace.server": "messages",
+		"workbench.commandPalette.experimental.suggestCommands": true,
+		"workbench.commandPalette.preserveInput": true,
+		"workbench.quickOpen.closeOnFocusLost": false,
+		"explorer.confirmDelete": false,
+		"workbench.settings.editor": "json",
+		"workbench.editor.closeOnFileDelete": true,
+		"workbench.editor.enablePreview": false,
+		"workbench.editor.closeEmptyGroups": false,
+		"git.confirmSync": false,
+		"terminal.integrated.enableMultiLinePasteWarning": "never"
 	}
 }

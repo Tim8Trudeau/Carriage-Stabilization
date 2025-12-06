@@ -1,60 +1,133 @@
 {
-    "github.copilot.enable": {
-        "*": false
-    },
-    "python.analysis.autoImportCompletions": true,
-    "python.analysis.fixAll": [
-        "source.unusedImports"
-    ],
-    "window.restoreWindows": "one",
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "workbench.settings.useSplitJSON": false,
-    "window.density.editorTabHeight": "compact",
-    "testing.coverageToolbarEnabled": true,
-    "git.alwaysShowStagedChangesResourceGroup": true,
-    "json.trace.server": "messages",
+    // ------------------------------------------------------------
+    // PYTHON ENVIRONMENT & VENV AUTO-ACTIVATION
+    // ------------------------------------------------------------
+    "python.defaultInterpreterPath": "C:/Users/timkt/Projects/Carriage Stabilization/venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "python.venvPath": "C:/Users/timkt/Projects/Carriage Stabilization",
+    "python.analysis.indexing": true,
+    "python.analysis.useLibraryCodeForTypes": true,
+    "python.analysis.typeCheckingMode": "basic",
+    // ------------------------------------------------------------
+    // PYTEST TEST DISCOVERY
+    // ------------------------------------------------------------
     "python.testing.pytestEnabled": true,
-    "debugpy.showPythonInlineValues": true,
-    "github.copilot.codeEdits.enable": false,
-    "github.copilot.languages": {
-    "python": false,
-    "plaintext": false,
-    "markdown": false
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    // ------------------------------------------------------------
+    // RUFF LINTER + FORMATTER (REPLACES BLACK + FLAKE8 + ISORT)
+    // ------------------------------------------------------------
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit"
     },
-    "github.copilot.editor.inlineSuggest.enable": false,
-    "github.copilot.chat.codeExecution.enabled": false,
-    "github.copilot.editor.enableCodeActions": false,
-    "github.copilot.chat.enableCodeActions": false,
+    // Ruff lint settings
+    "ruff.lint.args": [
+        "--line-length",
+        "88",
+        "--select",
+        "E,F,W,I,N",
+        "--ignore",
+        "E501",
+        "--extend-select",
+        "B",
+        "--extend-select",
+        "C90"
+    ],
+    // Ruff formatter settings
+    "ruff.format.args": [
+        "--line-length",
+        "88"
+    ],
+    // ------------------------------------------------------------
+    // MYPY STATIC TYPE CHECKING
+    // ------------------------------------------------------------
+    "mypy.enabled": true,
+    "mypy.runServer": true,
+    "mypy.dmypyEnabled": true,
+    "mypy.args": [
+        "--ignore-missing-imports",
+        "--show-column-numbers",
+        "--pretty"
+    ],
+    // ------------------------------------------------------------
+    // GITHUB COPILOT — ENABLED (SAFE MODE)
+    // ------------------------------------------------------------
+    "github.copilot.enable": {
+        "*": true,
+        "python": true,
+        "plaintext": true,
+        "markdown": true,
+        "scminput": true
+    },
+    "github.copilot.suggestions.enabled": true,
+    "github.copilot.editor.inlineSuggest.enable": true,
+    "github.copilot.chat.enableCodeActions": true,
+    "github.copilot.editor.enableCodeActions": true,
+    // DO NOT enable the experimental rewrite engine
+    "github.copilot.codeEdits.enable": false,
     "github.copilot.advanced": {
         "runEditCommands": false,
-        "enableInlineCompletions": false
+        "enableInlineCompletions": true
     },
+    "github.copilot.languages": {
+        "python": true,
+        "plaintext": true,
+        "markdown": true
+    },
+    "github.copilot.workspaceHints.enabled": true,
     "github.copilot.feedback.enableNotifications": false,
-    "github.copilot.suggestions.enabled": false,
-    "github.copilot.workspaceHints.enabled": false,
-    "git.suggestSmartCommit": false,
-    "workbench.commandPalette.experimental.suggestCommands": true,
-    "workbench.commandPalette.preserveInput": true,
-    "workbench.quickOpen.closeOnFocusLost": false,
-
-    // Auto-save behavior
+    // ------------------------------------------------------------
+    // EDITOR / UI / FILE HANDLING
+    // ------------------------------------------------------------
+    "editor.minimap.enabled": false,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [
+        88
+    ],
     "files.autoSave": "onFocusChange",
     "files.trimTrailingWhitespace": true,
-
+    // JSON formatting
     "[jsonc]": {
         "editor.defaultFormatter": "vscode.json-language-features"
     },
-
-    "explorer.confirmDelete": false,
-    "editor.minimap.enabled": false,
+    // ------------------------------------------------------------
+    // WORKBENCH EXPERIENCE
+    // ------------------------------------------------------------
+    "window.restoreWindows": "one",
+    "window.density.editorTabHeight": "compact",
+    "workbench.settings.useSplitJSON": false,
     "workbench.settings.editor": "json",
-    "workbench.editor.closeOnFileDelete": true,
     "workbench.editor.enablePreview": false,
     "workbench.editor.closeEmptyGroups": false,
-
-    "git.confirmSync": false,
+    "workbench.editor.closeOnFileDelete": true,
     "workbench.startupEditor": "none",
-
+    "workbench.commandPalette.experimental.suggestCommands": true,
+    "workbench.commandPalette.preserveInput": true,
+    "workbench.quickOpen.closeOnFocusLost": false,
+    // ------------------------------------------------------------
+    // TERMINAL SETTINGS
+    // ------------------------------------------------------------
     "terminal.integrated.enableMultiLinePasteWarning": "never",
-    "git.autofetch": true
+    // ------------------------------------------------------------
+    // GIT INTEGRATION
+    // ------------------------------------------------------------
+    "git.autofetch": true,
+    "git.suggestSmartCommit": false,
+    "git.confirmSync": false,
+    "git.alwaysShowStagedChangesResourceGroup": true,
+    // ------------------------------------------------------------
+    // DEBUGGING / MISC
+    // ------------------------------------------------------------
+    "debugpy.showPythonInlineValues": true,
+    "json.trace.server": "messages",
+    "testing.coverageToolbarEnabled": true,
+    "explorer.confirmDelete": false
 }
