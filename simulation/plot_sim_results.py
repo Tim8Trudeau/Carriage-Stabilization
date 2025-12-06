@@ -153,14 +153,36 @@ def annotate_perturbations(ax, sim: CarriageSimulator):
     for t1, t2, mag in pert.steps:
         lines.append(f"Step: {mag:+.3f} Nm from {t1:.2f}–{t2:.2f}s")
 
-    for amp, freq in pert.sine_params:
-        lines.append(f"Sine: {amp:.3f} Nm @ {freq:.2f} Hz")
+# ------------------------------------------------------------
+# Sine-wave disturbances (deterministic)
+# ------------------------------------------------------------
+    if pert.sine_waves:
+        lines.append("Deterministic Sine Waves:")
+        for amp, freq, phase, t0, t1 in pert.sine_waves:
+            if math.isinf(t1):
+                t1_label = "∞"
+            else:
+                t1_label = f"{t1:.2f}s"
+            lines.append(
+                f"  A={amp:+.3f} Nm, f={freq:.3f} Hz, φ={phase:.2f}, active {t0:.2f}s → {t1_label}"
+            )
+
+    if pert.rnd_phase_sine:
+        lines.append("Random-Phase Sine Waves:")
+        for amp, freq, phase, t0, t1 in pert.rnd_phase_sine:
+            if math.isinf(t1):
+                t1_label = "∞"
+            else:
+                t1_label = f"{t1:.2f}s"
+            lines.append(
+                f"  A={amp:+.3f} Nm, f={freq:.3f} Hz, φ_random={phase:.2f}, active {t0:.2f}s → {t1_label}"
+            )
 
     if pert.noise_std > 0:
         lines.append(f"Noise σ = {pert.noise_std:.4f} Nm")
 
-    for mag, prob in pert.random_kicks:
-        lines.append(f"Kicks: {mag:+.3f} Nm, p={prob:.3f}")
+    # for mag, prob in pert.random_kicks:
+    #     lines.append(f"Kicks: {mag:+.3f} Nm, p={prob:.3f}")
 
     if not lines:
         return

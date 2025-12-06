@@ -1,4 +1,4 @@
-# central_config.py
+# simulation/central_config.py
 """
 ==================
 Unified configuration loader for the Carriage Stabilization project.
@@ -48,9 +48,6 @@ load_simulation_config() returns a 6-tuple:
     controller  : Callable[[theta, omega, t], motor_cmd]
     ic_tuple    : (theta0, omega0, t0)
 
-The controller returned is always a callable mapping simulator state
-to a normalized motor command in [-1, +1].
-
 Architecture Notes
 ------------------
 • No part of this module depends on plotting, hardware drivers, or
@@ -82,6 +79,7 @@ import tomllib
 from typing import Callable, Optional
 
 from simulation.carriage_simulator import PlantParams, MotorParams, SimConfig
+from simulation.perturbations import Perturbation
 from flc.controller import FLCController
 
 
@@ -131,7 +129,7 @@ def load_simulation_config(
     )
 
     # ------------------------------------------------------------
-    # NEW FRICTION-DRIVE MOTOR MODEL (correct)
+    # Motor parameters
     # ------------------------------------------------------------
     motor = MotorParams(
         tau_motor_one=float(cfg["motor"]["tau_motor_one"]),
@@ -161,6 +159,65 @@ def load_simulation_config(
     )
 
     # ------------------------------------------------------------
+    # Disturbance configuration
+    # ------------------------------------------------------------
+    sim_cfg.perturb = Perturbation()
+
+    # --- Impulses ---
+    if "impulse" in cfg and cfg["impulse"].get("enable", False):
+        for ev in cfg["impulse"].get("events", []):
+            sim_cfg.perturb.add_impulse(
+                float(ev["t0"]),
+                float(ev["magnitude"]),
+            )
+
+    # --- Step disturbances ---
+    if "step" in cfg and cfg["step"].get("enable", False):
+        for ev in cfg["step"].get("events", []):
+            sim_cfg.perturb.add_step(
+                float(ev["t0"]),
+                float(ev["t1"]),
+                float(ev["magnitude"]),
+            )
+
+    # --- Deterministic sine wave ---
+    if "sine" in cfg and cfg["sine"].get("enable", False):
+        s = cfg["sine"]
+        sim_cfg.perturb.add_sine(
+            amplitude=float(s["amplitude"]),
+            freq=float(s["frequency"]),
+            phase=float(s.get("phase", 0.0)),
+            t_start=float(s.get("t_start", 0.0)),
+            t_end=float(s.get("t_end", float("inf"))),
+        )
+
+    # --- Random-phase sine wave ---
+    if "rnd_sine" in cfg and cfg["rnd_sine"].get("enable", False):
+        r = cfg["rnd_sine"]
+        sim_cfg.perturb.add_random_phase_sine(
+            amplitude=float(r["amplitude"]),
+            freq=float(r["frequency"]),
+            t_start=float(s.get("t_start", 0.0)),
+            t_end=float(s.get("t_end", float("inf"))),
+        )
+
+    # --- Multiple sine harmonics ---
+    if "multi_sine" in cfg:
+        for ev in cfg["multi_sine"]:
+            sim_cfg.perturb.add_sine(
+                amplitude=float(ev["amplitude"]),
+                freq=float(ev["frequency"]),
+                phase=float(ev.get("phase", 0.0)),
+                t_start=float(ev.get("t_start", 0.0)),
+                t_end=float(ev.get("t_end", float("inf"))),
+            )
+
+    if "noise" in cfg and cfg["noise"].get("enable", False):
+        sim_cfg.perturb.add_noise(
+            float(cfg["noise"]["std"])
+        )
+
+    # ------------------------------------------------------------
     # Controller selection
     # ------------------------------------------------------------
     ctrl_cfg = cfg["controller"]
@@ -188,14 +245,12 @@ def load_simulation_config(
 
         flc = FLCController(flc_cfg)
 
-
         # Input scaling
         scale_cfg = flc_cfg.get("scaling", {})
         theta_max = float(scale_cfg.get("THETA_MAX_RAD", 1.0))
         omega_max = float(scale_cfg.get("OMEGA_MAX_RAD_S", 1.0))
 
         def flc_controller(theta, omega, t):
-            # Normalize
             theta_n = max(-1.0, min(1.0, theta / theta_max))
             omega_n = max(-1.0, min(1.0, omega / omega_max))
             return flc.calculate_motor_cmd(theta_n, omega_n)
