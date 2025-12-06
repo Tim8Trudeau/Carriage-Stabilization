@@ -21,7 +21,7 @@
     // ------------------------------------------------------------
     // RUFF LINTER + FORMATTER (REPLACES BLACK + FLAKE8 + ISORT)
     // ------------------------------------------------------------
-    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.defaultFormatter": "ms-python.python",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.fixAll": "explicit",
