@@ -80,7 +80,7 @@ def main_control_loop():
     flc = FLCController(controller_params)
 
     # Motor PWM controller (GPIO 12/13 by default; 200 Hz unless overridden in cfg)
-    motor_freq = int(controller_params.get("PWM_FREQ_HZ", 200))
+    motor_freq = int(controller_params.get("PWM_FREQ_HZ", 250))
     motor = DualPWMController(frequency=motor_freq)
 
     main_log.info("All components initialized successfully.")

@@ -1,3 +1,4 @@
+
 # ============================================================
 # Carriage Stabilization — Physics Simulation Configuration
 # For: carriage_simulator.py (inertia-based model)
@@ -62,3 +63,67 @@ FLC_CONFIG_PATH = "config/flc_config.toml"  # Path to fuzzy logic controller fil
 [logging]
 LEVEL = "INFO"
 WRITE_CSV = false
+
+# ============================================================
+# Impulse disturbances
+# ============================================================
+[impulse]
+enable = true
+
+[[impulse.events]]
+t0 = 5.0
+magnitude = 0.4
+
+[[impulse.events]]
+t0 = 25.0
+magnitude = -0.4
+
+# ============================================================
+# Step disturbances
+# ============================================================
+[step]
+enable = true
+
+[[step.events]]
+t0 = 10.0
+t1 = 15.0
+magnitude = 0.03
+
+# ============================================================
+# Deterministic sine wave
+# ============================================================
+[sine]
+enable = true
+amplitude = 0.2
+frequency = 0.5
+phase = 0.0
+t_start = 5.0
+t_end = 20.0
+
+# ============================================================
+# Random-phase sine wave
+# ============================================================
+[rnd_sine]
+enable = true
+amplitude = 0.015
+frequency = 0.2
+t_start = 5.0
+t_end = 20.0
+
+# ============================================================
+# Multiple sine harmonics
+# ============================================================
+[[multi_sine]]
+enable = true
+amplitude = 0.01
+frequency = 0.75
+phase = 0.0
+t_start = 20.0
+t_end = 40.0
+
+# ============================================================
+# Noise
+# ============================================================
+[noise]
+enable = false
+std = 0.02

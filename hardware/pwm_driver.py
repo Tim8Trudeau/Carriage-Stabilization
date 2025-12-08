@@ -21,25 +21,28 @@ if _USE_MOCK:
         motor_log.error("Neither pigpio nor mock_pigpio available: %s", e)
 
 
+MIN_PWM = 5700
+MAX_PWM = 1_000_000
+
 class DualPWMController:
     """
     DualPWMController generates two hardware PWM signals using pigpio (or a test mock).
-    GPIO 12 (PWM0) and GPIO 13 (PWM1) are driven at `frequency` (default 200 Hz).
+    GPIO 12 (PWM0) and GPIO 13 (PWM1) are driven at `frequency` (default 250 Hz).
     Use set_speed(value: float) with value in [-1.0, +1.0]:
       value > 0 -> PWM0 active; value < 0 -> PWM1 active; 0 -> both off.
     Attributes:
         pi: pigpio.pi() or mock
         freq: int
-        gpio_pwm0: int (default 12)
-        gpio_pwm1: int (default 13)
+        gpio_pwm0: int (default 13) Change code instead of rewiring!
+        gpio_pwm1: int (default 12)
     """
 
-    def __init__(self, frequency: int = 200):
+    def __init__(self, frequency: int = 250):
         """
         Initialize the PWM controller with given frequency (Hz).
         Both PWM channels start at 0% duty.
         Args:
-            frequency (int): PWM signal frequency in Hz (default: 200).
+            frequency (int): PWM signal frequency in Hz (default: 250).
         """
         if _pigpio is None:
             raise ImportError("pigpio not available and test.mocks.mock_pigpio not found")
@@ -51,7 +54,6 @@ class DualPWMController:
         # self.gpio_pwm1 = 13
         self.gpio_pwm0 = 13 # Reverse motor direction
         self.gpio_pwm1 = 12
-
 
         self.pi = _pigpio.pi()
 
@@ -71,6 +73,12 @@ class DualPWMController:
 
         motor_log.info("PWM_0 PIN %d, PWM_1 PIN %d @ %d Hz", self.gpio_pwm0, self.gpio_pwm1, self.freq)
 
+    def _map_with_deadzone(self, value: float) -> int:
+        v = abs(value)
+        if v < 1e-6:
+            return 0
+        return int(MIN_PWM + v * (MAX_PWM - MIN_PWM))
+
     def set_speed(self, value: float):
         """
         Set the PWM output based on the signed float input.
@@ -80,15 +88,15 @@ class DualPWMController:
         """
         # Negative value means reverse motor direction
         if value < 0.0:
-            duty_val = min(-value, 1.0)  # Clamp to max 1.0
+            pwm = self._map_with_deadzone(value)
             self.duty_cycle_0 = 0
-            self.duty_cycle_1 = int(duty_val * 1_000_000)
+            self.duty_cycle_1 = pwm
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
 
         elif value > 0.0:
-            duty_val = min(value, 1.0)  # Clamp to max 1.0
-            self.duty_cycle_0 = int(duty_val * 1_000_000)
+            pwm = self._map_with_deadzone(value)
+            self.duty_cycle_0 = pwm
             self.duty_cycle_1 = 0
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
