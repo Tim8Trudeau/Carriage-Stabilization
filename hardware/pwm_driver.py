@@ -21,7 +21,7 @@ if _USE_MOCK:
         motor_log.error("Neither pigpio nor mock_pigpio available: %s", e)
 
 
-MIN_PWM = 5700
+MIN_PWM = 57000
 MAX_PWM = 1_000_000
 
 class DualPWMController:

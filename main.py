@@ -133,4 +133,11 @@ def main_control_loop():
 
 
 if __name__ == "__main__":
+    import os
+    import logging
+
+    if os.getenv("CS_TARGET_MODE", "0") == "1":
+        # Disable all logging globally
+        logging.disable(logging.CRITICAL)
+
     main_control_loop()
