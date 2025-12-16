@@ -1,0 +1,48 @@
+# config/imu_config.toml
+#
+# IMU-specific configuration for the Carriage Stabilization project.
+# This file is consumed by main.py and passed into hardware/imu_driver.py as:
+#   IMU_Driver(iir_params, controller_params)
+#
+# Note: The simulator does not use this file (it loads only sim_config.toml and flc_config.toml).
+
+[controller_params]
+# Normalization / sensor scale
+THETA_RANGE_RAD = 1.5707963267948966      # π/2 : maps ±90° to ±1.0
+ACCEL_RAW_FS    = 16384                   # MPU-6050 @ ±2g => 16384 LSB/g (≈1g magnitude)
+
+# Axis mapping (current physical mounting)
+# Theta uses atan2(AX_filtered, -AZ_filtered) so that theta=0 at the top of the wheel.
+THETA_AXIS_NUM  = "AX"
+THETA_AXIS_DEN  = "AZ"
+THETA_DEN_SIGN  = -1                      # invert Z in the atan2 denominator
+OMEGA_AXIS      = "GY"                    # gyro axis aligned with wheel rotation (CCW positive)
+
+# -----------------------
+# Gyro bias calibration
+# -----------------------
+GYRO_BIAS_CAL_ENABLE      = true
+GYRO_BIAS_CAL_SAMPLES     = 500           # samples to average at startup
+GYRO_BIAS_CAL_MAX_ABS_LSB = 250           # "stillness" gate: |gyro_lsb| must be below this while calibrating
+
+# --------------------------------
+# Complementary tilt estimator
+# --------------------------------
+# If enabled, tilt is blended between:
+#   accel tilt (atan2) and integrated gyro (omega)
+USE_COMPLEMENTARY_TILT = false
+COMPLEMENTARY_ALPHA    = 0.98             # higher => trust gyro more (0.98 is common)
+
+# -------------------------------------------
+# Detect accel "non-gravity" / shock moments
+# -------------------------------------------
+# Used to temporarily down-weight accel tilt during bumps/vibration.
+ACCEL_NONGRAV_ENABLE    = true
+ACCEL_NONGRAV_THRESH_G  = 0.20            # flag if | |a| - 1g | > threshold
+ACCEL_NONGRAV_HOLD_S    = 0.15            # hold flag this long once tripped
+
+[iir_params]
+# Filter / sampling knobs (used by imu_driver IIR LPFs)
+SAMPLE_RATE_HZ   = 100.0                  # match your IMU read loop / configured ODR
+ACCEL_CUTOFF_HZ  = 4.0
+OMEGA_CUTOFF_HZ  = 8.0

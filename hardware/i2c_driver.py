@@ -2,74 +2,90 @@
 """
 Unified I2C host factory for real hardware (pigpio) and simulation (mock).
 
-- Pass SIM_MODE via controller_params["SIM_MODE"] (or sim_mode arg).
-- If SIM_MODE=True → return mock host that can read sim_config.toml and apply
-  [simulation.initial_conditions].
-- Else try pigpio; if unavailable, fall back to mock host (TOML disabled).
+Selection:
+  - Pass SIM_MODE via controller_params["SIM_MODE"] (preferred), or override with sim_mode=...
+  - If SIM_MODE is True: return the mock I2C host.
+  - Else: try pigpio; if unavailable or not connected, fall back to the mock host
+    (with TOML/initial-conditions disabled to keep tests deterministic).
+
+The returned host is "pigpio-like" and implements at least:
+  i2c_open, i2c_close, i2c_read_byte_data, i2c_read_i2c_block_data,
+  i2c_write_byte_data, stop
 """
 
 from __future__ import annotations
-import logging, os, sys
-from typing import Optional, Dict
+
+import logging
+import os
+from typing import Any, Dict, Optional
 
 _i2c_log = logging.getLogger("imu.i2c")
 
-# Minimal regs used by the IMU driver
-CTRL3_C    = 0x12
-STATUS_REG = 0x1E
-OUTX_L_G   = 0x22
-
-_XLDA = 0x01
-_GDA  = 0x02
-
-_SIM_TOML_PATH = "config/sim_config.toml"
 
 def _running_under_pytest() -> bool:
-    pt = "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules
-    _i2c_log.info("i2c_driver: SIM_MODE=Running under pytest? %s", pt)
-    return pt
+    return "PYTEST_CURRENT_TEST" in os.environ
 
-def get_i2c_host(controller_params: Optional[Dict] = None,
-                 sim_mode: Optional[bool] = None):
+
+def _import_mock_pigpio():
+    """Import mock pigpio from the project's mocks package.
+
+    Your project historically used `test.mocks.mock_pigpio`.
+    If you later move it under `tests.mocks.mock_pigpio`, this also supports that.
     """
-    Returns a pigpio-like object implementing:
-      i2c_open, i2c_close, i2c_read_byte_data, i2c_read_i2c_block_data,
-      i2c_write_byte_data, stop
-    """
-    params = controller_params or {}
+    try:
+        from test.mocks import mock_pigpio  # legacy/real in your repo
+        return mock_pigpio
+    except Exception:
+        from tests.mocks import mock_pigpio  # fallback if migrated to tests/
+        return mock_pigpio
+
+
+def _make_mock_host(
+    controller_params: Dict[str, Any],
+    *,
+    apply_initial_conditions: bool = True,
+):
+    """Create a pigpio-like mock host."""
+    mock_pigpio = _import_mock_pigpio()
+
+    # Keep the knob for future mocks; current mock_pigpio.pi() takes no args.
+    use_toml = bool(apply_initial_conditions and not _running_under_pytest())
+
+    pi = mock_pigpio.pi()
+
+    _i2c_log.info(
+        "i2c_driver: using mock_pigpio I2C host (SIM_MODE=%s, toml=%s)",
+        bool(controller_params.get("SIM_MODE", False)),
+        use_toml,
+    )
+    return pi
+
+
+def get_i2c_host(
+    controller_params: Optional[Dict[str, Any]] = None,
+    *,
+    sim_mode: Optional[bool] = None,
+    apply_initial_conditions: bool = True,
+):
+    """Return an I2C host object (real pigpio or mock)."""
+    params: Dict[str, Any] = controller_params or {}
+
     if sim_mode is None:
         sim_mode = bool(params.get("SIM_MODE", False))
 
     if sim_mode:
-        _i2c_log.info("i2c_driver: SIM_MODE=True → using mock I2C host with sim_config.toml")
-        return _make_mock_host(params, apply_initial_conditions=True)
+        return _make_mock_host(params, apply_initial_conditions=apply_initial_conditions)
 
-    # Try real pigpio first
+    # Try real pigpio first.
     try:
         import pigpio  # type: ignore
         pi = pigpio.pi()
-        if not pi.connected:
-            _i2c_log.debug("******* pigpio did not start.**********")
-            raise RuntimeError("pigpio daemon not running (try: sudo pigpiod)")
-        _i2c_log.info("i2c_driver: using pigpio.pi() as I2C host.")
-        return pi
+        if getattr(pi, "connected", True):
+            _i2c_log.info("i2c_driver: using real pigpio host")
+            return pi
+        _i2c_log.warning("i2c_driver: pigpio host not connected; falling back to mock")
     except Exception as e:
-        _i2c_log.warning("i2c_driver: pigpio unavailable (%s). Falling back to mock I2C host.", e)
-        return _make_mock_host(params, apply_initial_conditions=False)
+        _i2c_log.warning("i2c_driver: pigpio unavailable (%s); falling back to mock", e)
 
-def _make_mock_host(controller_params: Dict, apply_initial_conditions: bool):
-    """
-    Create a pigpio-like mock host from the unified mock_pigpio.
-    """
-    try:
-        from test.mocks import mock_pigpio
-    except Exception as e:
-        raise ImportError("test.mocks.mock_pigpio not found") from e
-
-    use_toml = bool(apply_initial_conditions and not _running_under_pytest())
-    pi = mock_pigpio.pi()
-    _i2c_log.info(
-        "i2c_driver: using unified mock_pigpio as I2C host (SIM_MODE=%s, toml=%s)",
-        bool(controller_params.get("SIM_MODE", False)), use_toml
-    )
-    return pi
+    # Fallback mock with TOML disabled.
+    return _make_mock_host(params, apply_initial_conditions=False)

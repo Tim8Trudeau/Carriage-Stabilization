@@ -15,45 +15,32 @@ if not _USE_MOCK:
 
 if _USE_MOCK:
     try:
-        from test.mocks import mock_pigpio as _pigpio  # module-style mock
+        from tests.mocks import mock_pigpio as _pigpio  # module-style mock
     except Exception as e:
         _pigpio = None
         motor_log.error("Neither pigpio nor mock_pigpio available: %s", e)
 
 
-MIN_PWM = 57000
+# Deadzone/offset so motors don't stall at low duty.
+# Dutycycle units are pigpio "hardware_PWM" units: 0..1_000_000.
+MIN_PWM = 57_000
 MAX_PWM = 1_000_000
 
+
 class DualPWMController:
-    """
-    DualPWMController generates two hardware PWM signals using pigpio (or a test mock).
-    GPIO 12 (PWM0) and GPIO 13 (PWM1) are driven at `frequency` (default 250 Hz).
-    Use set_speed(value: float) with value in [-1.0, +1.0]:
-      value > 0 -> PWM0 active; value < 0 -> PWM1 active; 0 -> both off.
-    Attributes:
-        pi: pigpio.pi() or mock
-        freq: int
-        gpio_pwm0: int (default 13) Change code instead of rewiring!
-        gpio_pwm1: int (default 12)
-    """
+    """DualPWMController generates two hardware PWM signals using pigpio (or a test mock)."""
 
     def __init__(self, frequency: int = 250):
-        """
-        Initialize the PWM controller with given frequency (Hz).
-        Both PWM channels start at 0% duty.
-        Args:
-            frequency (int): PWM signal frequency in Hz (default: 250).
-        """
         if _pigpio is None:
-            raise ImportError("pigpio not available and test.mocks.mock_pigpio not found")
+            raise ImportError("pigpio not available and tests.mocks.mock_pigpio not found")
 
         self.freq = frequency
         self.duty_cycle_0 = 0
         self.duty_cycle_1 = 0
-        # self.gpio_pwm0 = 12
-        # self.gpio_pwm1 = 13
-        self.gpio_pwm0 = 13 # Reverse motor direction
-        self.gpio_pwm1 = 12
+
+        # GPIO mapping (reversed to change motor direction)
+        self.gpio_pwm0 = 13  # CW
+        self.gpio_pwm1 = 12  # CCW
 
         self.pi = _pigpio.pi()
 
@@ -74,19 +61,17 @@ class DualPWMController:
         motor_log.info("PWM_0 PIN %d, PWM_1 PIN %d @ %d Hz", self.gpio_pwm0, self.gpio_pwm1, self.freq)
 
     def _map_with_deadzone(self, value: float) -> int:
-        v = abs(value)
+        """Map value in [-1,+1] to pigpio dutycycle, with offset deadzone."""
+        v = abs(float(value))
         if v < 1e-6:
             return 0
+        # Clamp magnitude to 1.0 so absurd inputs don't overflow dutycycle
+        if v > 1.0:
+            v = 1.0
         return int(MIN_PWM + v * (MAX_PWM - MIN_PWM))
 
     def set_speed(self, value: float):
-        """
-        Set the PWM output based on the signed float input.
-        In pigpio, hardware_PWM(gpio, frequency, dutycycle) expects dutycycle 0..1_000_000.
-        Args:
-            value (float): range [-1, +1]
-        """
-        # Negative value means reverse motor direction
+        """Set signed speed in [-1,+1]."""
         if value < 0.0:
             pwm = self._map_with_deadzone(value)
             self.duty_cycle_0 = 0
@@ -101,7 +86,7 @@ class DualPWMController:
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, self.duty_cycle_0)
             self.pi.hardware_PWM(self.gpio_pwm1, self.freq, self.duty_cycle_1)
 
-        else:  # value == 0.0 Stop motor
+        else:
             self.duty_cycle_0 = 0
             self.duty_cycle_1 = 0
             self.pi.hardware_PWM(self.gpio_pwm0, self.freq, 0)

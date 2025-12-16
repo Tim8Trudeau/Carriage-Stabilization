@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 """
-Terminal oscilloscope for IMU signals (AX, AY, AZ, GX, GY, GZ).
-Works over SSH / VSCode terminal. No GUI required.
-
-Uses the corrected LSM6DS3TR_i2c_driver and displays live ASCII plots
-for debugging axis orientation, tilt behavior, and gyro response.
-
-Run:
-    python -m utils.imu_scope
+Terminal oscilloscope for MPU6050 IMU.
+Plots AX, AY, AZ, GX, GY, GZ as ASCII waveforms in real-time over SSH.
 """
 
 import time
@@ -15,18 +9,17 @@ import os
 import asciichartpy as ascii
 from collections import deque
 
-from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver
+from hardware.mpu6050_i2c_driver import MPU6050Driver
 
 
-WINDOW = 120     # number of samples in rolling plot window
-REFRESH = 0.05   # seconds between frames (≈20 FPS)
+WINDOW = 120
+REFRESH = 0.05  # 20 FPS
 
 
 def main():
-    dev = LSM6DS3TRDriver(controller_params={"I2C_BUS": 1, "I2C_ADDR": 0x6B})
+    dev = MPU6050Driver(controller_params={"I2C_BUS":1, "I2C_ADDR":0x68})
     time.sleep(0.2)
 
-    # Rolling buffers
     ax_buf = deque([0]*WINDOW, maxlen=WINDOW)
     ay_buf = deque([0]*WINDOW, maxlen=WINDOW)
     az_buf = deque([0]*WINDOW, maxlen=WINDOW)
@@ -36,10 +29,8 @@ def main():
 
     try:
         while True:
-            # Read all 6 axes
             ax, ay, az, gx, gy, gz = dev.read_all_axes()
 
-            # Append to buffers
             ax_buf.append(ax)
             ay_buf.append(ay)
             az_buf.append(az)
@@ -47,40 +38,31 @@ def main():
             gy_buf.append(gy)
             gz_buf.append(gz)
 
-            # Clear terminal
             os.system("clear")
-            print("IMU Terminal Oscilloscope (CTRL-C to exit)\n")
+            print("MPU6050 IMU Terminal Oscilloscope (CTRL-C to exit)\n")
 
-            # ACCELEROMETER -----------------------------------------------------
-            print("AX (motor-shaft direction — not used for tilt):")
-            print(ascii.plot(list(ax_buf), {"height": 6}))
-            print()
+            print("AX (motor-shaft direction — unused for tilt):")
+            print(ascii.plot(list(ax_buf), {"height": 6}), "\n")
 
-            print("AY (tangential — tilt numerator):")
-            print(ascii.plot(list(ay_buf), {"height": 6}))
-            print()
+            print("AY (tangential — used in atan2):")
+            print(ascii.plot(list(ay_buf), {"height": 6}), "\n")
 
-            print("AZ (radial inward — tilt denominator):")
-            print(ascii.plot(list(az_buf), {"height": 6}))
-            print()
+            print("AZ (radial inward — used in atan2):")
+            print(ascii.plot(list(az_buf), {"height": 6}), "\n")
 
-            # GYROSCOPE ---------------------------------------------------------
-            print("GX (wheel rotation axis — OMEGA):")
-            print(ascii.plot(list(gx_buf), {"height": 6}))
-            print()
+            print("GX (rotation axis — wheel angular velocity):")
+            print(ascii.plot(list(gx_buf), {"height": 6}), "\n")
 
             print("GY:")
-            print(ascii.plot(list(gy_buf), {"height": 6}))
-            print()
+            print(ascii.plot(list(gy_buf), {"height": 6}), "\n")
 
             print("GZ:")
-            print(ascii.plot(list(gz_buf), {"height": 6}))
-            print()
+            print(ascii.plot(list(gz_buf), {"height": 6}), "\n")
 
             time.sleep(REFRESH)
 
     except KeyboardInterrupt:
-        print("\nExiting imu_scope.")
+        print("\nExiting.")
     finally:
         dev.close()
 
