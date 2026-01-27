@@ -1,0 +1,32 @@
+{
+	"folders": [
+		{
+			"uri": "vscode-remote://ssh-remote+7b22686f73744e616d65223a2243535f7069227d/home/pi/projects/Carriage-Stabilization"
+		}
+	],
+	"remoteAuthority": "ssh-remote+7b22686f73744e616d65223a2243535f7069227d",
+	"settings": {
+		"github.copilot.enable": {
+			"*": true,
+			"python": true,
+			"plaintext": true,
+			"markdown": true,
+			"scminput": true
+		},
+		"github.copilot.editor.enableCodeActions": true,
+		"window.density.editorTabHeight": "compact",
+		"workbench.settings.useSplitJSON": false,
+		"workbench.settings.editor": "json",
+		"workbench.editor.enablePreview": false,
+		"workbench.editor.closeEmptyGroups": false,
+		"workbench.editor.closeOnFileDelete": true,
+		"workbench.commandPalette.experimental.suggestCommands": true,
+		"workbench.commandPalette.preserveInput": true,
+		"workbench.quickOpen.closeOnFocusLost": false,
+		"terminal.integrated.enableMultiLinePasteWarning": "never",
+		"git.confirmSync": false,
+		"json.trace.server": "messages",
+		"testing.coverageToolbarEnabled": true,
+		"explorer.confirmDelete": false
+	}
+}

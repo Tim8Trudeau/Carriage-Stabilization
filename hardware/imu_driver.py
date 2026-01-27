@@ -127,14 +127,7 @@ import math
 import time
 import logging
 from typing import Tuple
-
-
-# Prefer MPU-6050 if present; otherwise fall back to LSM6DS3TR.
-try:
-    from hardware.MPU6050_driver import MPU6050Driver as _IMUDevice
-except Exception:  # pragma: no cover
-    from hardware.LSM6DS3TR_i2c_driver import LSM6DS3TRDriver as _IMUDevice
-
+from hardware.mpu6050_i2c_driver import MPU6050Driver as _IMUDevice
 
 imu_log = logging.getLogger("imu")
 
