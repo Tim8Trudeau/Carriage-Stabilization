@@ -61,7 +61,7 @@ def test_read_all_axes_big_endian_signed(monkeypatch):
     host = FakePiHost(regmap=regmap)
 
     import hardware.mpu6050_i2c_driver as mpu
-    monkeypatch.setattr(mpu, "get_i2c_host", lambda _p=None, **_kw: host, raising=True)
+    monkeypatch.setattr(mpu.i2c_driver, "get_i2c_host", lambda _p=None, **_kw: host, raising=True)
 
     from hardware.mpu6050_i2c_driver import MPU6050Driver
     dev = MPU6050Driver(controller_params={"I2C_BUS": 1, "I2C_ADDR": 0x68, "SIM_MODE": True})
@@ -81,9 +81,9 @@ def test_read_all_axes_big_endian_signed(monkeypatch):
 def test_init_writes_expected_registers(monkeypatch):
     host = FakePiHost(regmap={MPU_WHO_AM_I: 0x68})
 
-    import hardware.i2c_driver as i2c_drv
-    monkeypatch.setattr(i2c_drv, "get_i2c_host", lambda _p=None, **_kw: host, raising=True)
-    from hardware.mpu6050_i2c_driver import MPU6050Driver
+    import hardware.mpu6050_i2c_driver as mpu
+    monkeypatch.setattr(mpu.i2c_driver, "get_i2c_host", lambda _p=None, **_kw: host, raising=True)
+    MPU6050Driver = mpu.MPU6050Driver
     dev = MPU6050Driver(controller_params={"I2C_BUS": 1, "I2C_ADDR": 0x68, "SIM_MODE": True})
     dev.close()
 

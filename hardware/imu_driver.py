@@ -24,13 +24,10 @@ This module expects the underlying IMU driver to provide:
 where each value is a signed 16-bit integer in the IMU’s native units.
 (For MPU-6050: big-endian register reads, returned as Python ints.)
 
-To stay “drop-in” across IMUs, this module attempts to import a preferred
-MPU-6050 driver first, and falls back to the LSM6DS3TR driver if needed.
-
 Project Axis Conventions (Current MPU-6050 Mounting)
 ----------------------------------------------------
 
-You have empirically verified the new IMU orientation:
+You must empirically verify the IMU orientation:
 
 Accelerometer:
     • Tilt angle theta is computed in the X–Z plane.
@@ -174,6 +171,9 @@ class IMU_Driver:
         # Normalization limits
         self.theta_range_rad = float(self.controller_params.get("THETA_RANGE_RAD", math.pi))
 
+        # Linear gain applied to theta before normalization
+        self.theta_gain = float(self.controller_params.get("THETA_GAIN", 1.0))
+
         # Soft-clip scale (raw counts)
         self.accel_raw_fs = int(self.controller_params.get("ACCEL_RAW_FS", 16384))
 
@@ -258,7 +258,7 @@ class IMU_Driver:
         dt = 1.0 / max(1e-6, self.sample_rate_hz)
 
         for _ in range(n):
-            ax, ay, az, gx, gy, gz = self._dev.read_all_axes()
+            ax, ay, az, gx, gy, gz = self._dev.read_all_axes() # type: ignore
             acc += float(gy)
             time.sleep(dt)
 
@@ -273,7 +273,7 @@ class IMU_Driver:
         """
 
         # Read: AX, AY, AZ, GX, GY, GZ
-        ax, ay, az, gx, gy, gz = self._dev.read_all_axes()
+        ax, ay, az, gx, gy, gz = self._dev.read_all_axes() # type: ignore
 
         # Time step
         now = time.perf_counter()
@@ -300,13 +300,15 @@ class IMU_Driver:
         omega_norm = self._omega_filt / self._OMEGA_FS_RAW
         omega_norm = max(-1.0, min(1.0, omega_norm))
 
-        # Detect non-gravity moments: |a| should be near 1g
-        amag = math.sqrt(float(ax) * float(ax) + float(ay) * float(ay) + float(az) * float(az))
-        amag_g = amag / max(1e-6, self.accel_1g_raw)
-        accel_trust = abs(amag_g - 1.0) <= self.accel_mag_tol_g
-
         # Optional complementary filter for theta
+        amag_g = 0.0
+        accel_trust = False
         if self.use_complementary:
+            # Detect non-gravity moments: |a| should be near 1g
+            amag = math.sqrt(float(ax) * float(ax) + float(ay) * float(ay) + float(az) * float(az))
+            amag_g = amag / max(1e-6, self.accel_1g_raw)
+            accel_trust = abs(amag_g - 1.0) <= self.accel_mag_tol_g
+
             # Convert filtered omega (raw) -> deg/s -> rad/s
             omega_dps = self._omega_filt / max(1e-9, self.gyro_lsb_per_dps)
             omega_rad_s = omega_dps * (math.pi / 180.0)
@@ -321,7 +323,8 @@ class IMU_Driver:
         else:
             theta_rads = theta_acc
 
-        theta_norm = theta_rads / self.theta_range_rad
+        theta_rads_eff = self.theta_gain * theta_rads
+        theta_norm = theta_rads_eff / self.theta_range_rad
         theta_norm = max(-1.0, min(1.0, theta_norm))
 
         imu_log.debug(

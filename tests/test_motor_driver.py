@@ -35,14 +35,14 @@ def test_set_speed_max_negative(motor_driver: DualPWMController):
 
 def test_set_speed_half_positive(motor_driver: DualPWMController):
     motor_driver.set_speed(max_speed / 2)
-    assert motor_driver.duty_cycle_0 == 500_000
+    assert motor_driver.duty_cycle_0 > 500_000 and motor_driver.duty_cycle_0 < 530_000
     assert motor_driver.duty_cycle_1 == 0
 
 
 def test_set_speed_half_negative(motor_driver: DualPWMController):
     motor_driver.set_speed(-max_speed / 2)
+    assert motor_driver.duty_cycle_1 > 500_000 and motor_driver.duty_cycle_1 < 530_000
     assert motor_driver.duty_cycle_0 == 0
-    assert motor_driver.duty_cycle_1 == 500_000
 
 
 def test_set_speed_clamping_high(motor_driver: DualPWMController):

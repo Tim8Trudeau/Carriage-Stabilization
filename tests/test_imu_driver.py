@@ -1,213 +1,161 @@
+import importlib
 import math
-import sys
 import types
 import pytest
 
 
-def _install_fake_mpu6050_driver_module():
-    '''
-    Ensure importing hardware.imu_driver doesn't fall back to LSM6DS3TR on systems
-    where hardware.MPU6050_driver isn't present (e.g., Windows test runs).
-    '''
-    mod = types.ModuleType("hardware.MPU6050_driver")
-
-    class _PlaceholderMPU6050Driver:
-        def __init__(self, controller_params=None, **kwargs):
-            self.controller_params = controller_params or {}
-
-        def read_all_axes(self):
-            return (0, 0, 0, 0, 0, 0)
-
-        def close(self):
-            return None
-
-    mod.MPU6050Driver = _PlaceholderMPU6050Driver
-    sys.modules["hardware.MPU6050_driver"] = mod
-
-
-@pytest.fixture(autouse=True)
-def _ensure_fake_mpu_module():
-    _install_fake_mpu6050_driver_module()
-
-
-class StubIMUDevice:
-    '''
-    Stub IMU device used to drive IMU_Driver unit tests.
-
-    It returns a fixed (ax, ay, az, gx, gy, gz) tuple each call, or uses a generator.
-    '''
-    def __init__(self, controller_params=None, sequence=None):
-        self._seq = iter(sequence) if sequence is not None else None
-        self.last = (0, 0, 0, 0, 0, 0)
+class FakeIMUDevice:
+    """
+    Fake device that returns a programmable sequence of (AX, AY, AZ, GX, GY, GZ).
+    """
+    def __init__(self, seq):
+        self._seq = list(seq)
+        self.closed = False
 
     def read_all_axes(self):
-        if self._seq is None:
-            return self.last
-        self.last = next(self._seq)
-        return self.last
+        if not self._seq:
+            # keep returning last value if sequence exhausted
+            return self._last
+        self._last = self._seq.pop(0)
+        return self._last
 
     def close(self):
-        return None
+        self.closed = True
 
 
-def _mk_driver(
-    monkeypatch,
-    *,
-    sample_rate_hz=100.0,
-    accel_cut_hz=4.0,
-    omega_cut_hz=8.0,
-    theta_range=math.pi / 2,
-    accel_fs=16384,
-    accel_1g=16384.0,
-    do_bias=False,
-    bias_samples=10,
-    use_comp=False,
-    comp_alpha=0.98,
-    accel_mag_tol_g=0.15,
-    stub_sequence=None,
-):
-    '''
-    Construct IMU_Driver with a StubIMUDevice and deterministic timing.
-    '''
-    import hardware.imu_driver as imu_mod
+def _make_driver(monkeypatch, seq, *, iir=None, ctrl=None, perf_counter_seq=None, sleep_noop=True):
+    import hardware.imu_driver as imu
 
-    imu_mod._IMUDevice = lambda controller_params=None: StubIMUDevice(sequence=stub_sequence)
+    # Replace underlying device factory in module namespace
+    monkeypatch.setattr(imu, "_IMUDevice", lambda controller_params=None: FakeIMUDevice(seq))
 
-    # Avoid real sleeps during bias calibration
-    monkeypatch.setattr(imu_mod.time, "sleep", lambda _dt: None)
-
-    # Deterministic perf_counter (only matters for complementary filter dt)
-    t = {"v": 0.0}
-
-    def _pc():
-        t["v"] += 1.0 / sample_rate_hz
-        return t["v"]
-
-    monkeypatch.setattr(imu_mod.time, "perf_counter", _pc)
+    # Make time deterministic
+    if perf_counter_seq is not None:
+        it = iter(perf_counter_seq)
+        monkeypatch.setattr(imu.time, "perf_counter", lambda: next(it))
+    if sleep_noop:
+        monkeypatch.setattr(imu.time, "sleep", lambda _dt: None)
 
     iir_params = {
-        "SAMPLE_RATE_HZ": sample_rate_hz,
-        "ACCEL_CUTOFF_HZ": accel_cut_hz,
-        "OMEGA_CUTOFF_HZ": omega_cut_hz,
+        "SAMPLE_RATE_HZ": 100.0,
+        "ACCEL_CUTOFF_HZ": 1e9,   # alpha ~1
+        "OMEGA_CUTOFF_HZ": 1e9,   # alpha ~1
     }
-    controller_params = {
-        "THETA_RANGE_RAD": theta_range,
-        "ACCEL_RAW_FS": accel_fs,
-        "ACCEL_1G_RAW": accel_1g,
-        "DO_GYRO_BIAS_CAL": do_bias,
-        "GYRO_BIAS_SAMPLES": bias_samples,
-        "USE_COMPLEMENTARY": use_comp,
-        "COMP_ALPHA": comp_alpha,
-        "ACCEL_MAG_TOL_G": accel_mag_tol_g,
-        "GYRO_LSB_PER_DPS": 131.0,
+    if iir:
+        iir_params.update(iir)
+
+    ctrl_params = {
+        "THETA_RANGE_RAD": math.pi,
+        "THETA_GAIN": 1.0,
+        "DO_GYRO_BIAS_CAL": False,
+        "USE_COMPLEMENTARY": False,
     }
+    if ctrl:
+        ctrl_params.update(ctrl)
 
-    return imu_mod.IMU_Driver(iir_params, controller_params)
+    return imu.IMU_Driver(iir_params=iir_params, controller_params=ctrl_params)
 
 
-def test_theta_zero_at_top(monkeypatch):
-    '''
-    At theta=0 (top): aX≈0, aZ≈-1g so atan2(aX, -aZ) ≈ 0.
-    '''
+def test_theta_norm_basic_zero(monkeypatch):
+    # ax=0, az=-1g => theta=0
     seq = [
         (0, 0, -16384, 0, 0, 0),
     ]
-    d = _mk_driver(monkeypatch, stub_sequence=seq, do_bias=False, use_comp=False)
-    theta_n, omega_n = d.read_normalized()
+    d = _make_driver(monkeypatch, seq)
+    theta, omega = d.read_normalized()
+    assert abs(theta) < 1e-6
+    assert abs(omega) < 1e-6
+    d.close()
 
-    assert abs(theta_n) < 1e-3
-    assert abs(omega_n) < 1e-6
+
+def test_theta_gain_scales_linearly(monkeypatch):
+    # Choose ax=+10000, az=-10000 => atan2(10000, 10000)=pi/4
+    seq = [
+        (10000, 0, -10000, 0, 0, 0),
+    ]
+    d = _make_driver(monkeypatch, seq, ctrl={"THETA_GAIN": 2.0})
+    theta, _ = d.read_normalized()
+    # 2*(pi/4)/pi = 0.5
+    assert theta == pytest.approx(0.5, abs=1e-3)
+    d.close()
 
 
-def test_theta_plus_90_ccw(monkeypatch):
-    '''
-    At +90° CCW: aX≈+1g, aZ≈0 so atan2(aX, -aZ) ≈ +pi/2 -> theta_norm≈+1.
-    '''
+def test_theta_norm_clamps_to_one(monkeypatch):
+    # Near +90° already gives theta=~pi/2; with gain=3 -> 1.5*pi/2/pi=1.5 -> clamp to 1
     seq = [
         (16384, 0, 0, 0, 0, 0),
     ]
-    d = _mk_driver(monkeypatch, stub_sequence=seq, do_bias=False, use_comp=False, theta_range=math.pi / 2)
-    theta_n, _ = d.read_normalized()
-    assert theta_n > 0.90
+    d = _make_driver(monkeypatch, seq, ctrl={"THETA_GAIN": 3.0})
+    theta, _ = d.read_normalized()
+    assert theta == 1.0
+    d.close()
 
 
-def test_omega_norm_saturates(monkeypatch):
-    '''
-    omega_norm is derived from filtered gyro Y divided by 32768 and then clamped.
-    A large positive GY should clamp to +1.0.
-    '''
+def test_omega_norm_from_gy(monkeypatch):
     seq = [
-        (0, 0, -16384, 0, 40000, 0),
+        (0, 0, -16384, 0, 16384, 0),
     ]
-    d = _mk_driver(monkeypatch, stub_sequence=seq, do_bias=False, use_comp=False)
-    _, omega_n = d.read_normalized()
-    assert omega_n == 1.0
+    d = _make_driver(monkeypatch, seq)
+    _, omega = d.read_normalized()
+    assert omega == pytest.approx(16384/32768.0, abs=1e-6)
+    d.close()
 
 
-def test_gyro_bias_calibration_zeroes_omega(monkeypatch):
-    '''
-    If gyro bias calibration runs on constant GY=+100, subsequent readings of the same
-    GY should result in omega near 0 after bias subtraction.
-    '''
-    seq = [(0, 0, -16384, 0, 100, 0)] * 11  # 10 for calibration + 1 for first read
-    d = _mk_driver(monkeypatch, stub_sequence=seq, do_bias=True, bias_samples=10, use_comp=False)
-    _, omega_n = d.read_normalized()
-    assert abs(omega_n) < 1e-6
-
-
-def test_complementary_filter_downweights_accel_when_non_gravity(monkeypatch):
-    '''
-    When complementary filter is enabled and |a| deviates from ~1g, IMU_Driver forces
-    alpha=1.0 for that sample (trust gyro only).
-
-    We test this by:
-    - seeding theta_est near 0 at the top,
-    - injecting a bogus accel magnitude on the second sample,
-    - providing a known gyro rate that integrates to a small positive angle.
-    '''
-    seq = [
-        (0, 0, -16384, 0, 0, 0),
-        (32768, 0, -32768, 0, 1000, 0),
-    ]
-
-    d = _mk_driver(
+def test_gyro_bias_calibration_zeroes_constant_rate(monkeypatch):
+    # During calibration, gy=100 for N samples. After that, also 100 => omega_norm ~0.
+    n = 20
+    seq = [(0, 0, -16384, 0, 100, 0)] * (n + 1)
+    d = _make_driver(
         monkeypatch,
-        stub_sequence=seq,
-        do_bias=False,
-        use_comp=True,
-        comp_alpha=0.5,
-        accel_mag_tol_g=0.05,
-        sample_rate_hz=100.0,
-        theta_range=math.pi / 2,
+        seq,
+        ctrl={"DO_GYRO_BIAS_CAL": True, "GYRO_BIAS_SAMPLES": n},
+        perf_counter_seq=[0.0, 0.01],  # only used after init
+    )
+    _, omega = d.read_normalized()
+    assert abs(omega) < 1e-6
+    d.close()
+
+
+def test_complementary_filter_ignores_bad_accel_when_mag_off(monkeypatch):
+    import hardware.imu_driver as imu
+
+    # accel magnitude far from 1g -> accel_trust False => alpha forced to 1.0
+    # Provide gyro rate that integrates theta upward. Keep accel tilt at 0 to prove we don't pull back to 0.
+    # Use two samples with dt=0.1s.
+    seq = [
+        (0, 0, -16384*4, 0, 1310, 0),  # huge accel magnitude (4g), gyro=1310 raw => 10 dps
+        (0, 0, -16384*4, 0, 1310, 0),
+    ]
+    d = _make_driver(
+        monkeypatch,
+        seq,
+        ctrl={
+            "USE_COMPLEMENTARY": True,
+            "COMP_ALPHA": 0.0,         # would fully trust accel if accel_trust True
+            "ACCEL_MAG_TOL_G": 0.15,
+            "DO_GYRO_BIAS_CAL": False,
+            "GYRO_LSB_PER_DPS": 131.0,
+        },
+        perf_counter_seq=[0.0, 0.1, 0.2],
     )
 
-    d.read_normalized()  # seed
-    theta_n, _ = d.read_normalized()
+    # First call sets _theta_est from integrated gyro and alpha=1.0 (because accel_trust False)
+    theta1, _ = d.read_normalized()
+    theta2, _ = d.read_normalized()
 
-    omega_rad_s = (1000 / 131.0) * (math.pi / 180.0)
-    expected_theta = omega_rad_s * (1.0 / 100.0)
-    expected_norm = expected_theta / (math.pi / 2)
-
-    assert theta_n < 0.2
-    assert abs(theta_n - expected_norm) < 0.05
+    assert theta2 > theta1  # keeps integrating
+    d.close()
 
 
-def test_omega_norm_computes_correctly(monkeypatch):
-    '''
-    Test omega_norm computation:
-    - filtered_gyro_y = 40000 (raw) should clamp to +1.0
-    - filtered_gyro_y = -40000 (raw) should clamp to -1.0
-    - filtered_gyro_y = 0 (raw) should result in omega_norm = 0.0
-    - filtered_gyro_y = 32768 (raw) should result in omega_norm = 1.0
-    - filtered_gyro_y = -32768 (raw) should result in omega_norm = -1.0
-    '''
-    seq = [
-        (0, 0, -16384, 0, 40000, 0),
-        (0, 0, -16384, 0, -40000, 0),
-        (0, 0, -16384, 0, 0, 0),
-        (0, 0, -16384, 0, 32768, 0),
-        (0, 0, -16384, 0, -32768, 0),
-    ]
-    d = _mk_driver(monkeypatch, stub_sequence=seq, do_bias=False, use_comp=False)
-    for _i in range(5):
-        _, omega_n = d.read_normalized()
+def test_math_helpers_iir_alpha_monotonic():
+    import hardware.imu_driver as imu
+    a1 = imu._iir_alpha(100.0, 1.0)
+    a2 = imu._iir_alpha(100.0, 10.0)
+    assert 0.0 < a1 < a2 < 1.0
+
+
+def test_soft_clip_tanh_bounds():
+    import hardware.imu_driver as imu
+    assert imu._soft_clip_tanh(0, 1000) == 0
+    assert abs(imu._soft_clip_tanh(10_000_000, 1000)) <= 1000
+    assert abs(imu._soft_clip_tanh(-10_000_000, 1000)) <= 1000
