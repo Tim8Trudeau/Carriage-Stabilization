@@ -21,6 +21,8 @@ OMEGA_AXIS      = "GY"                    # gyro axis aligned with wheel rotatio
 # Gain appied to controll THETA authority
 # THETA_GAIN      = 2.0
 THETA_GAIN      = 1.0
+# Theta Offset Correction
+THETA_ZERO_RAD = 0.125
 
 # -----------------------
 # Gyro bias calibration

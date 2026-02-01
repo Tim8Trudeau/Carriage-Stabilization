@@ -240,3 +240,19 @@ output = { theta_coeff = -0.7, omega_coeff = -0.82, bias = 0 }
 [[rule_base]]
 rule = ["LECW", "LVCW"]
 output = { theta_coeff = -0.7, omega_coeff = -1.2, bias = 0 }
+
+#######################################################################
+# Stiction / low-speed torque compensation
+# Detects "stuck" when |theta| is above threshold but |omega| ~ 0 for a while,
+# then ramps an additional motor command until motion resumes.
+#######################################################################
+
+[stiction_boost]
+ENABLED = true
+THETA_ON_DEG = 4.0
+THETA_OFF_DEG = 3.0
+OMEGA_STUCK_NORM = 0.012
+HOLD_S = 0.20
+BOOST_RAMP_PER_S = 1.0
+BOOST_DECAY_PER_S = 2.0
+BOOST_MAX = 0.3

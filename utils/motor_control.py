@@ -95,6 +95,7 @@ def main():
         speed = _clamp(round(speed + direction * step, 3), -1.0, 1.0)
         ctrl.set_speed(speed)
         LOG.info("speed=%.2f", speed)
+        print(f"motor speed = {speed}")
 
         # Flip direction at endpoints
         if speed >= 1.0:

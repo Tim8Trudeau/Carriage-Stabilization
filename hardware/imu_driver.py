@@ -171,6 +171,9 @@ class IMU_Driver:
         # Normalization limits
         self.theta_range_rad = float(self.controller_params.get("THETA_RANGE_RAD", math.pi))
 
+        # Theta offset applied
+        self.theta_zero_rad = float(controller_params.get("THETA_ZERO_RAD", 0.125))
+
         # Linear gain applied to theta before normalization
         self.theta_gain = float(self.controller_params.get("THETA_GAIN", 1.0))
 
@@ -290,8 +293,9 @@ class IMU_Driver:
         self._ax_lp += self.alpha_acc * (float(ax_sc) - self._ax_lp)
         self._az_lp += self.alpha_acc * (float(az_sc) - self._az_lp)
 
-        # Accel tilt: theta = atan2(aX, -aZ)
+        # Accel tilt: theta = atan2(aX, -aZ) with offset
         theta_acc = math.atan2(self._ax_lp, -self._az_lp)
+        theta_acc -= self.theta_zero_rad
 
         # Gyro Y bias correction + LPF (omega axis is GY)
         gy_corr = float(gy) - self._gyro_bias_y
@@ -343,6 +347,6 @@ class IMU_Driver:
     def close(self) -> None:
         try:
             if getattr(self, "_dev", None) is not None:
-                self._dev.close()
+                self._dev.close() # type: ignore
         finally:
             self._dev = None
