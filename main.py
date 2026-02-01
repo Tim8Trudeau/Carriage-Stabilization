@@ -75,12 +75,11 @@ def main_control_loop() -> None:
 
     flc_cfg, imu_controller_params, iir_params = load_config()
 
-    loop_hz = float(flc_cfg.get("LOOP_FREQ_HZ", 50.0))
+    loop_hz = float(flc_cfg.get("LOOP_FREQ_HZ", 100.0))
     loop_period = 1.0 / max(loop_hz, 1e-6)
 
+    #   Create FLC    #
     imu = IMU_Driver(iir_params, imu_controller_params)
-    time.sleep(0.5)
-
     flc = FLCController(flc_cfg)
     motor = DualPWMController(frequency=int(flc_cfg.get("PWM_FREQ_HZ", 250)))
 
@@ -89,6 +88,9 @@ def main_control_loop() -> None:
             t0 = time.perf_counter()
 
             with CodeProfiler("Control Loop"):
+                ############
+                # FLC Loop #
+                ############
                 theta_n, omega_n = imu.read_normalized()
                 motor.set_speed(flc.calculate_motor_cmd(theta_n, omega_n))
 
@@ -97,7 +99,7 @@ def main_control_loop() -> None:
             if sleep > 0:
                 end = time.perf_counter() + sleep
                 while not shutdown.is_set() and time.perf_counter() < end:
-                    time.sleep(0.002)
+                    time.sleep(0.001)
 
     finally:
         try:

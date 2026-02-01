@@ -19,7 +19,8 @@ THETA_DEN_SIGN  = -1                      # invert Z in the atan2 denominator
 OMEGA_AXIS      = "GY"                    # gyro axis aligned with wheel rotation (CCW positive)
 
 # Gain appied to controll THETA authority
-THETA_GAIN      = 2.0
+# THETA_GAIN      = 2.0
+THETA_GAIN      = 1.0
 
 # -----------------------
 # Gyro bias calibration

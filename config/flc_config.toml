@@ -61,7 +61,7 @@ output = { theta_coeff = -0.7, omega_coeff = -0.82, bias = 0 }
 # 3
 [[rule_base]]
 rule = ["LECCW", "NV"]
-output = { theta_coeff = -0.7, omega_coeff = -0.17, bias = 0 }
+output = { theta_coeff = -0.7, omega_coeff = -1, bias = 0 }
 
 # 4
 [[rule_base]]
@@ -89,7 +89,7 @@ output = { theta_coeff = -0.55, omega_coeff = -0.82, bias = 0 }
 # 8
 [[rule_base]]
 rule = ["MECCW", "NV"]
-output = { theta_coeff = -0.55, omega_coeff = -0.17, bias = 0 }
+output = { theta_coeff = -0.55, omega_coeff = -1, bias = 0 }
 
 # 9
 [[rule_base]]
@@ -112,12 +112,12 @@ output = { theta_coeff = -0.25, omega_coeff = -1.2, bias = 0 }
 # 12
 [[rule_base]]
 rule = ["SECCW", "SVCCW"]
-output = { theta_coeff = -0.25, omega_coeff = -0.75, bias = 0 }
+output = { theta_coeff = -0.25, omega_coeff = -0.82, bias = 0 }
 
 # 13
 [[rule_base]]
 rule = ["SECCW", "NV"]
-output = { theta_coeff = -0.25, omega_coeff = -0.82, bias = 0 }
+output = { theta_coeff = -0.25, omega_coeff = -1, bias = 0 }
 
 # 14
 [[rule_base]]
@@ -173,7 +173,7 @@ output = { theta_coeff = -0.25, omega_coeff = -0.82, bias = 0 }
 # 23
 [[rule_base]]
 rule = ["SECW", "NV"]
-output = { theta_coeff = -0.25, omega_coeff = -0.17, bias = 0 }
+output = { theta_coeff = -0.25, omega_coeff = -1, bias = 0 }
 
 # 24
 [[rule_base]]
@@ -201,7 +201,7 @@ output = { theta_coeff = -0.55, omega_coeff = -0.82, bias = 0 }
 # 28
 [[rule_base]]
 rule = ["MECW", "NV"]
-output = { theta_coeff = -0.55, omega_coeff = -0.17, bias = 0 }
+output = { theta_coeff = -0.55, omega_coeff = -1, bias = 0 }
 
 # 29
 [[rule_base]]
@@ -229,7 +229,7 @@ output = { theta_coeff = -0.7, omega_coeff = -0.82, bias = 0 }
 # 33
 [[rule_base]]
 rule = ["LECW", "NV"]
-output = { theta_coeff = -0.7, omega_coeff = -0.17, bias = 0 }
+output = { theta_coeff = -0.7, omega_coeff = -1, bias = 0 }
 
 # 34
 [[rule_base]]
